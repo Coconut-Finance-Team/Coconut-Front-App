@@ -31,8 +31,13 @@ pipeline {
         stage('Build React Application') {
     steps {
         script {
-            sh 'npm cache clean --force'  // 캐시 클리어 추가
-            sh 'npm install --legacy-peer-deps --verbose'  // verbose 플래그로 자세한 로그 확인
+            // package-lock.json 파일이 깨졌으므로 삭제
+            sh 'rm -f package-lock.json'
+            // node_modules도 깨끗하게 지우고 시작
+            sh 'rm -rf node_modules'
+            sh 'npm cache clean --force'
+            // 새로 설치
+            sh 'npm install --legacy-peer-deps'
             sh 'npm run build'
         }
     }
