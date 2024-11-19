@@ -29,13 +29,14 @@ pipeline {
             }
         }
         stage('Build React Application') {
-            steps {
-                script {
-                    sh 'npm install --legacy-peer-deps'
-                    sh 'npm run build'
-                }
-            }
+    steps {
+        script {
+            sh 'npm cache clean --force'  // 캐시 클리어 추가
+            sh 'npm install --legacy-peer-deps --verbose'  // verbose 플래그로 자세한 로그 확인
+            sh 'npm run build'
         }
+    }
+}
         stage('Build Docker Image') {
             steps {
                 script {
