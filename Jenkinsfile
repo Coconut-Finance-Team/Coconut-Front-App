@@ -31,7 +31,7 @@ pipeline {
         stage('Build React Application') {
             steps {
                 script {
-                    sh 'npm install'
+                    sh 'npm install --legacy-peer-deps'
                     sh 'npm run build'
                 }
             }
