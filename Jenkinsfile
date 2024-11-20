@@ -4,7 +4,7 @@ pipeline {
        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials-id')
        DOCKER_IMAGE = "castlehoo/frontend"
        DOCKER_TAG = "${BUILD_NUMBER}"
-       ARGOCD_CREDENTIALS = credentials('argocd-auth')
+       ARGOCD_CREDENTIALS = credentials('argocd-token')
        KUBE_CONFIG = credentials('eks-kubeconfig')
        GIT_CREDENTIALS = credentials('github-token')
    }
@@ -79,7 +79,7 @@ pipeline {
                            git checkout main
                            git pull origin main
                            sed -i 's|image: ${DOCKER_IMAGE}:.*|image: ${DOCKER_IMAGE}:${DOCKER_TAG}|' k8s/deployment.yaml
-                           git add frontend/deployment.yaml
+                           git add k8s/deployment.yml
                            git commit -m "Update frontend deployment to version ${DOCKER_TAG}"
                            git push origin main
                        """
@@ -93,7 +93,7 @@ pipeline {
                    script {
                        sh """
                            export KUBECONFIG=${KUBE_CONFIG}
-                           argocd login a20247f3f4bd34d8390eb6f1fb3b9cd4-726286595.ap-northeast-2.elb.amazonaws.com --username ${ARGOCD_CREDENTIALS_USR} --password ${ARGOCD_CREDENTIALS_PSW} --insecure
+                           argocd login a20247f3f4bd34d8390eb6f1fb3b9cd4-726286595.ap-northeast-2.elb.amazonaws.com --token ${ARGOCD_CREDENTIALS} --insecure
                            argocd app sync frontend-app --prune
                            argocd app wait frontend-app --health
                            argocd logout a20247f3f4bd34d8390eb6f1fb3b9cd4-726286595.ap-northeast-2.elb.amazonaws.com
