@@ -75,7 +75,7 @@ pipeline {
                            git config pull.rebase false
                            git checkout main
                            git pull origin main
-                           sed -i 's|image: ${DOCKER_IMAGE}:.*|image: ${DOCKER_IMAGE}:${DOCKER_TAG}|' frontend/deployment.yaml
+                           sed -i 's|image: ${DOCKER_IMAGE}:.*|image: ${DOCKER_IMAGE}:${DOCKER_TAG}|' k8s/deployment.yaml
                            git add frontend/deployment.yaml
                            git commit -m "Update frontend deployment to version ${DOCKER_TAG}"
                            git push origin main
