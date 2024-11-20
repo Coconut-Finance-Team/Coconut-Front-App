@@ -71,7 +71,7 @@ pipeline {
                        sh """
                            git config user.email "jenkins@example.com"
                            git config user.name "Jenkins"
-                           git remote set-url origin https://${GIT_CREDENTIALS_USR}:${GIT_CREDENTIALS_PSW}@github.com/castlhoo/k8s-manifests.git
+                           git remote set-url origin https://${GIT_CREDENTIALS_USR}:${GIT_CREDENTIALS_PSW}@github.com/Coconut-Finance-Team/Coconut-Front-App.git
                            git config pull.rebase false
                            git checkout main
                            git pull origin main
@@ -90,10 +90,10 @@ pipeline {
                    script {
                        sh """
                            export KUBECONFIG=${KUBE_CONFIG}
-                           argocd login ab43828f8bac94f8b9d8bd97a8d579c0-700015596.ap-northeast-2.elb.amazonaws.com --username ${ARGOCD_CREDENTIALS_USR} --password ${ARGOCD_CREDENTIALS_PSW} --insecure
+                           argocd login a20247f3f4bd34d8390eb6f1fb3b9cd4-726286595.ap-northeast-2.elb.amazonaws.com --username ${ARGOCD_CREDENTIALS_USR} --password ${ARGOCD_CREDENTIALS_PSW} --insecure
                            argocd app sync frontend-app --prune
                            argocd app wait frontend-app --health
-                           argocd logout ab43828f8bac94f8b9d8bd97a8d579c0-700015596.ap-northeast-2.elb.amazonaws.com
+                           argocd logout a20247f3f4bd34d8390eb6f1fb3b9cd4-726286595.ap-northeast-2.elb.amazonaws.com
                        """
                    }
                }
