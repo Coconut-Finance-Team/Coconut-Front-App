@@ -33,18 +33,21 @@ pipeline {
            }
        }
        stage('Build React Application') {
-           steps {
-               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                   script {
-                       sh 'rm -f package-lock.json'
-                       sh 'rm -rf node_modules'
-                       sh 'npm cache clean --force'
-                       sh 'npm install --legacy-peer-deps'
-                       sh 'npm run build'
-                   }
-               }
-           }
-       }
+    steps {
+        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+            script {
+                // npm install 타임아웃 설정 추가
+                timeout(time: 10, unit: 'MINUTES') {  // 10분 타임아웃 설정
+                    sh 'rm -f package-lock.json'
+                    sh 'rm -rf node_modules'
+                    sh 'npm cache clean --force'
+                    // NO_UPDATE_NOTIFIER=1로 불필요한 업데이트 알림 제거
+                    sh 'NO_UPDATE_NOTIFIER=1 npm install --legacy-peer-deps --no-audit'  
+                }
+            }
+        }
+    }
+}
        stage('Build Docker Image') {
            steps {
                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
