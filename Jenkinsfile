@@ -1,8 +1,7 @@
 pipeline {
    agent any
    environment {
-       DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials-id')
-       DOCKER_IMAGE = "castlehoo/frontend"
+       ECR_REPOSITORY = "castlehoo/frontend"
        DOCKER_TAG = "${BUILD_NUMBER}"
        ARGOCD_CREDENTIALS = credentials('argocd-token')
        KUBE_CONFIG = credentials('eks-kubeconfig')
@@ -33,36 +32,38 @@ pipeline {
            }
        }
        stage('Build React Application') {
-    steps {
-        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-            script {
-                // npm install 타임아웃 설정 추가
-                timeout(time: 10, unit: 'MINUTES') {  // 10분 타임아웃 설정
-                    sh 'rm -f package-lock.json'
-                    sh 'rm -rf node_modules'
-                    sh 'npm cache clean --force'
-                    // NO_UPDATE_NOTIFIER=1로 불필요한 업데이트 알림 제거
-                    sh 'NO_UPDATE_NOTIFIER=1 npm install --legacy-peer-deps --no-audit'  
-                }
-            }
-        }
-    }
-}
-       stage('Build Docker Image') {
            steps {
                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                    script {
-                       sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                       timeout(time: 10, unit: 'MINUTES') {
+                           sh 'rm -f package-lock.json'
+                           sh 'rm -rf node_modules'
+                           sh 'npm cache clean --force'
+                           sh 'NO_UPDATE_NOTIFIER=1 npm install --legacy-peer-deps --no-audit'
+                           sh 'npm run build'
+                       }
                    }
                }
            }
        }
-       stage('Push to Docker Hub') {
+       stage('Build Docker Image') {
            steps {
                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                    script {
-                       sh "echo ${DOCKER_HUB_CREDENTIALS_PSW} | docker login -u ${DOCKER_HUB_CREDENTIALS_USR} --password-stdin"
-                       sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                       sh "docker build -t ${ECR_REPOSITORY}:${DOCKER_TAG} ."
+                   }
+               }
+           }
+       }
+       stage('Push to AWS ECR') {
+           steps {
+               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                   script {
+                       sh """
+                           aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin AIDA6ODU5GSNDMFXNAAFV.dkr.ecr.ap-northeast-2.amazonaws.com
+                           docker tag ${ECR_REPOSITORY}:${DOCKER_TAG} AIDA6ODU5GSNDMFXNAAFV.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
+                           docker push AIDA6ODU5GSNDMFXNAAFV.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
+                       """
                    }
                }
            }
@@ -78,8 +79,8 @@ pipeline {
                            git config pull.rebase false
                            git checkout main
                            git pull origin main
-                           sed -i 's|image: ${DOCKER_IMAGE}:.*|image: ${DOCKER_IMAGE}:${DOCKER_TAG}|' k8s/deployment.yaml
-                           git add k8s/deployment.yml
+                           sed -i 's|image: .*|image: AIDA6ODU5GSNDMFXNAAFV.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}|' k8s/deployment.yaml
+                           git add k8s/deployment.yaml
                            git commit -m "Update frontend deployment to version ${DOCKER_TAG}"
                            git push origin main
                        """
@@ -96,7 +97,7 @@ pipeline {
                            argocd login a20247f3f4bd34d8390eb6f1fb3b9cd4-726286595.ap-northeast-2.elb.amazonaws.com --token ${ARGOCD_CREDENTIALS} --insecure
                            argocd app sync frontend-app --prune
                            argocd app wait frontend-app --health
-                           argocd logout a20247f3f4bd34d8390eb6f1fb3b9cd4-726286595.ap-northeast-2.elb.amazonaws.com
+                           argocd logout a20247f3f4bd34d8390eb6f1fb3b9cd4-726286595.ap-northeast-2.amazonaws.com
                        """
                    }
                }
