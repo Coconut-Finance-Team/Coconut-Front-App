@@ -72,8 +72,6 @@ function App() {
             <Route path="/stock/:stockId" element={<StockDetail />} />
             <Route path="/chart/detail" element={<ChartDetail />} />
             <Route path="/search" element={<SearchPage />} />
-            {/* LoginTest 경로 추가 */}
-            <Route path="/logintest" element={<LoginTest />} />
           </Routes>
         </main>
         <Footer />
