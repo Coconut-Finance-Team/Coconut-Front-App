@@ -165,9 +165,6 @@ EOF
                           echo "Setting up KUBECONFIG..."
                           export KUBECONFIG=${KUBE_CONFIG}
                           
-                          echo "Testing ArgoCD CLI..."
-                          argocd version --client-only
-                          
                           echo "Attempting ArgoCD login..."
                           ARGOCD_SERVER="afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com"
                           
@@ -175,8 +172,7 @@ EOF
                               --username coconut \
                               --password ${ARGOCD_CREDENTIALS} \
                               --insecure \
-                              --plaintext \
-                              --port 443
+                              --plaintext
                           
                           echo "Checking ArgoCD connection..."
                           argocd cluster list
