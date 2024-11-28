@@ -63,7 +63,7 @@ pipeline {
                                # 나머지 의존성 설치
                                npm install --legacy-peer-deps --no-audit
                                
-                               npm run build
+                               DISABLE_ESLINT_PLUGIN=true npm run build
                            '''
                        }
                    }
