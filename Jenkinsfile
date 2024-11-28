@@ -6,7 +6,9 @@ pipeline {
        ARGOCD_CREDENTIALS = credentials('argocd-token')
        KUBE_CONFIG = credentials('eks-kubeconfig')
        GIT_CREDENTIALS = credentials('github-token')
+       AWS_CREDENTIALS = credentials('aws-credentials')
    }
+   
    stages {
        stage('Check Commit Message') {
            steps {
@@ -24,6 +26,7 @@ pipeline {
                }
            }
        }
+
        stage('Checkout') {
            steps {
                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
@@ -31,43 +34,81 @@ pipeline {
                }
            }
        }
+
+       stage('Setup Node.js') {
+           steps {
+               sh '''
+                   # nvm 환경 로드
+                   export NVM_DIR="$HOME/.nvm"
+                   [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+                   
+                   # Node.js 22.11.0 사용
+                   nvm use 22.11.0 || nvm install 22.11.0
+                   
+                   # 버전 확인
+                   node -v
+                   npm -v
+               '''
+           }
+       }
+
        stage('Build React Application') {
            steps {
                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                    script {
                        timeout(time: 10, unit: 'MINUTES') {
-                           sh 'rm -f package-lock.json'
-                           sh 'rm -rf node_modules'
-                           sh 'npm cache clean --force'
-                           sh 'NO_UPDATE_NOTIFIER=1 npm install --legacy-peer-deps --no-audit'
-                           sh 'npm run build'
+                           sh '''
+                               # 의존성 초기화
+                               rm -f package-lock.json
+                               rm -rf node_modules
+                               npm cache clean --force
+                               
+                               # ajv 패키지 먼저 설치
+                               npm install ajv --save-dev
+                               
+                               # 나머지 의존성 설치
+                               NO_UPDATE_NOTIFIER=1 npm install --legacy-peer-deps --no-audit
+                               
+                               # 빌드
+                               npm run build
+                           '''
                        }
                    }
                }
            }
        }
+
        stage('Build Docker Image') {
            steps {
                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                    script {
-                       sh "docker build -t ${ECR_REPOSITORY}:${DOCKER_TAG} ."
+                       sh "sudo docker build -t ${ECR_REPOSITORY}:${DOCKER_TAG} ."
                    }
                }
            }
        }
+
        stage('Push to AWS ECR') {
            steps {
                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                   script {
-                       sh """
-                           aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin AIDA6ODU5GSNDMFXNAAFV.dkr.ecr.ap-northeast-2.amazonaws.com
-                           docker tag ${ECR_REPOSITORY}:${DOCKER_TAG} AIDA6ODU5GSNDMFXNAAFV.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
-                           docker push AIDA6ODU5GSNDMFXNAAFV.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
-                       """
+                   withCredentials([[
+                       $class: 'AmazonWebServicesCredentialsBinding',
+                       credentialsId: 'aws-credentials',
+                       accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                       secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+                   ]]) {
+                       script {
+                           sh """
+                               aws ecr get-login-password --region ap-northeast-2 | sudo docker login --username AWS --password-stdin 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com
+                               sudo docker tag ${ECR_REPOSITORY}:${DOCKER_TAG} 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
+                               sudo docker push 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
+                           """
+                       }
                    }
                }
            }
        }
+
        stage('Update Kubernetes Manifests') {
            steps {
                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
@@ -79,7 +120,7 @@ pipeline {
                            git config pull.rebase false
                            git checkout main
                            git pull origin main
-                           sed -i 's|image: .*|image: AIDA6ODU5GSNDMFXNAAFV.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}|' k8s/deployment.yaml
+                           sed -i 's|image: .*|image: 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}|' k8s/deployment.yaml
                            git add k8s/deployment.yaml
                            git commit -m "Update frontend deployment to version ${DOCKER_TAG}"
                            git push origin main
@@ -88,25 +129,27 @@ pipeline {
                }
            }
        }
+
        stage('Sync ArgoCD Application') {
            steps {
                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                    script {
                        sh """
                            export KUBECONFIG=${KUBE_CONFIG}
-                           argocd login a20247f3f4bd34d8390eb6f1fb3b9cd4-726286595.ap-northeast-2.elb.amazonaws.com --token ${ARGOCD_CREDENTIALS} --insecure
+                           argocd login afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com --username admin --password ${ARGOCD_CREDENTIALS} --insecure
                            argocd app sync frontend-app --prune
                            argocd app wait frontend-app --health
-                           argocd logout a20247f3f4bd34d8390eb6f1fb3b9cd4-726286595.ap-northeast-2.amazonaws.com
+                           argocd logout afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com
                        """
                    }
                }
            }
        }
    }
+
    post {
        always {
-           sh 'docker logout'
+           sh 'sudo docker logout'
            sh 'rm -f ${KUBE_CONFIG}'
        }
    }
