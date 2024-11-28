@@ -110,17 +110,13 @@ pipeline {
                           echo "Fetching from origin..."
                           git fetch origin
                           
-                          echo "Stashing changes..."
-                          git stash
+                          echo "Resetting working directory..."
+                          git reset --hard HEAD
+                          git clean -fd
                           
-                          echo "Checking out main branch..."
+                          echo "Checking out and updating main branch..."
                           git checkout main
-                          
-                          echo "Applying stashed changes..."
-                          git stash pop
-                          
-                          echo "Pulling latest changes..."
-                          git pull origin main
+                          git reset --hard origin/main
                           
                           echo "Creating deployment file..."
                           mkdir -p k8s
@@ -170,21 +166,17 @@ EOF
                           export KUBECONFIG=${KUBE_CONFIG}
                           
                           echo "Testing ArgoCD CLI..."
-                          argocd version
+                          argocd version --client-only
                           
                           echo "Attempting ArgoCD login..."
-                          argocd login afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com \
+                          ARGOCD_SERVER="afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com"
+                          
+                          argocd login \$ARGOCD_SERVER \
                               --username coconut \
                               --password ${ARGOCD_CREDENTIALS} \
                               --insecure \
-                              --plaintext || {
-                              echo "Login failed with password flag, trying with token..."
-                              argocd login afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com \
-                                  --username coconut \
-                                  --token ${ARGOCD_CREDENTIALS} \
-                                  --insecure \
-                                  --plaintext
-                          }
+                              --plaintext \
+                              --port 443
                           
                           echo "Checking ArgoCD connection..."
                           argocd cluster list
