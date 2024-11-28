@@ -152,7 +152,7 @@ EOF
                    script {
                        sh """
                            export KUBECONFIG=${KUBE_CONFIG}
-                           argocd login afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com --username coconut --password ${ARGOCD_CREDENTIALS} --insecure --plaintext
+                           argocd login afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com --username coconut --token ${ARGOCD_CREDENTIALS} --insecure --plaintext
                            argocd app sync frontend-app --prune
                            argocd app wait frontend-app --health
                        """
