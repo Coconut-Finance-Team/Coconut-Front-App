@@ -168,11 +168,23 @@ EOF
                           echo "Attempting ArgoCD login..."
                           ARGOCD_SERVER="afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com"
                           
-                          argocd login \$ARGOCD_SERVER \
+                          # 첫 번째 시도: 기본 로그인
+                          argocd login \${ARGOCD_SERVER}:443 \
                               --username coconut \
                               --password ${ARGOCD_CREDENTIALS} \
-                              --insecure \
-                              --plaintext
+                              --insecure || {
+                              
+                              echo "First login attempt failed, trying with auth token..."
+                              # 두 번째 시도: 토큰 방식
+                              argocd login \${ARGOCD_SERVER} \
+                                  --auth-token ${ARGOCD_CREDENTIALS} \
+                                  --insecure || {
+                                  
+                                  echo "Second login attempt failed, trying with environment variable..."
+                                  # 세 번째 시도: 환경 변수 방식
+                                  ARGOCD_AUTH_TOKEN=${ARGOCD_CREDENTIALS} argocd login \${ARGOCD_SERVER} --insecure
+                              }
+                          }
                           
                           echo "Checking ArgoCD connection..."
                           argocd cluster list
