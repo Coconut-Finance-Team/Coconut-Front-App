@@ -20,13 +20,6 @@ import StockDetail from './components/home/StockDetail';
 import ChartDetail from './components/home/ChartDetail';
 import SearchPage from './components/common/SearchPage';
 import AdminPage from './components/admin/AdminPage';
-<<<<<<< HEAD
-<<<<<<< HEAD
-import LoginTest from './LoginTest';
-=======
->>>>>>> 1cc253567d1629fabc555f9096879e703085832a
-=======
->>>>>>> f3846cd6b0455ab4c91ae1d4e6702747a7ab9e82
 
 const GlobalStyle = createGlobalStyle`
   body {
