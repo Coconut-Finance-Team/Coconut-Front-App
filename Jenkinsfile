@@ -56,13 +56,8 @@ pipeline {
                                rm -f package-lock.json
                                rm -rf node_modules
                                npm cache clean --force
-                               
-                               # ajv 패키지를 --legacy-peer-deps와 함께 설치
                                npm install ajv --save-dev --legacy-peer-deps
-                               
-                               # 나머지 의존성 설치
                                npm install --legacy-peer-deps --no-audit
-                               
                                DISABLE_ESLINT_PLUGIN=true npm run build
                            '''
                        }
@@ -102,20 +97,19 @@ pipeline {
            }
        }
 
-stage('Update Kubernetes Manifests') {
-    steps {
-        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-            script {
-                sh """
-                    git fetch origin
-                    git stash
-                    git checkout main
-                    git stash pop
-                    git pull origin main
-                    git reset --hard origin/main
-                    
-                    mkdir -p k8s
-                    cat << EOF > k8s/deployment.yaml
+       stage('Update Kubernetes Manifests') {
+           steps {
+               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                   script {
+                       sh """
+                           git config --global user.email "jenkins@example.com"
+                           git config --global user.name "Jenkins"
+                           git fetch origin
+                           git reset --hard origin/main
+                           git clean -fd
+                           
+                           mkdir -p k8s
+                           cat << EOF > k8s/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -134,17 +128,15 @@ spec:
       - name: frontend
         image: 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
 EOF
-                    git config user.email "jenkins@example.com"
-                    git config user.name "Jenkins"
-                    git remote set-url origin https://${GIT_CREDENTIALS_USR}:${GIT_CREDENTIALS_PSW}@github.com/Coconut-Finance-Team/Coconut-Front-App.git
-                    git add k8s/deployment.yaml
-                    git commit -m "Update frontend deployment to version ${DOCKER_TAG}"
-                    git push origin main
-                """
-            }
-        }
-    }
-}
+                           git remote set-url origin https://${GIT_CREDENTIALS_USR}:${GIT_CREDENTIALS_PSW}@github.com/Coconut-Finance-Team/Coconut-Front-App.git
+                           git add k8s/deployment.yaml
+                           git commit -m "Update frontend deployment to version ${DOCKER_TAG}"
+                           git push origin main
+                       """
+                   }
+               }
+           }
+       }
 
        stage('Sync ArgoCD Application') {
            steps {
@@ -152,9 +144,13 @@ EOF
                    script {
                        sh """
                            export KUBECONFIG=${KUBE_CONFIG}
-                           argocd login afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com --username coconut --token ${ARGOCD_CREDENTIALS} --insecure --plaintext
-                           argocd app sync frontend-app --prune
-                           argocd app wait frontend-app --health
+                           argocd login afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com \
+                               --username coconut \
+                               --password ${ARGOCD_CREDENTIALS} \
+                               --insecure \
+                               --plaintext
+                           argocd app sync frontend-app
+                           argocd app wait frontend-app --health --timeout 600
                        """
                    }
                }
@@ -166,6 +162,12 @@ EOF
        always {
            sh 'docker logout'
            sh 'rm -f ${KUBE_CONFIG}'
+       }
+       failure {
+           echo 'Pipeline failed! Check the logs for details.'
+       }
+       success {
+           echo 'Pipeline completed successfully!'
        }
    }
 }
