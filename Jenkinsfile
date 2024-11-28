@@ -40,9 +40,7 @@ pipeline {
                 sh '''
                     export NVM_DIR="$HOME/.nvm"
                     [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-                    
                     nvm use 22.11.0 || nvm install 22.11.0
-                    
                     node -v
                     npm -v
                 '''
@@ -59,9 +57,11 @@ pipeline {
                                 rm -rf node_modules
                                 npm cache clean --force
                                 
-                                npm install ajv --save-dev
+                                # ajv 패키지를 --legacy-peer-deps와 함께 설치
+                                npm install ajv --save-dev --legacy-peer-deps
                                 
-                                NO_UPDATE_NOTIFIER=1 npm install --legacy-peer-deps --no-audit
+                                # 나머지 의존성 설치
+                                npm install --legacy-peer-deps --no-audit
                                 
                                 npm run build
                             '''
@@ -75,7 +75,7 @@ pipeline {
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     script {
-                        sh "sudo docker build -t ${ECR_REPOSITORY}:${DOCKER_TAG} ."
+                        sh "docker build -t ${ECR_REPOSITORY}:${DOCKER_TAG} ."
                     }
                 }
             }
@@ -92,9 +92,9 @@ pipeline {
                     ]]) {
                         script {
                             sh """
-                                aws ecr get-login-password --region ap-northeast-2 | sudo docker login --username AWS --password-stdin 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com
-                                sudo docker tag ${ECR_REPOSITORY}:${DOCKER_TAG} 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
-                                sudo docker push 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
+                                aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com
+                                docker tag ${ECR_REPOSITORY}:${DOCKER_TAG} 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
+                                docker push 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
                             """
                         }
                     }
@@ -107,13 +107,29 @@ pipeline {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     script {
                         sh """
+                            mkdir -p k8s
+                            cat << EOF > k8s/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
+EOF
                             git config user.email "jenkins@example.com"
                             git config user.name "Jenkins"
                             git remote set-url origin https://${GIT_CREDENTIALS_USR}:${GIT_CREDENTIALS_PSW}@github.com/Coconut-Finance-Team/Coconut-Front-App.git
-                            git config pull.rebase false
-                            git checkout main
-                            git pull origin main
-                            sed -i 's|image: .*|image: 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}|' k8s/deployment.yaml
                             git add k8s/deployment.yaml
                             git commit -m "Update frontend deployment to version ${DOCKER_TAG}"
                             git push origin main
@@ -129,10 +145,9 @@ pipeline {
                     script {
                         sh """
                             export KUBECONFIG=${KUBE_CONFIG}
-                            argocd login afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com --username admin --password ${ARGOCD_CREDENTIALS} --insecure
+                            argocd login afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com --username admin --password ${ARGOCD_CREDENTIALS} --insecure --plaintext
                             argocd app sync frontend-app --prune
                             argocd app wait frontend-app --health
-                            argocd logout afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com
                         """
                     }
                 }
@@ -142,7 +157,7 @@ pipeline {
 
     post {
         always {
-            sh 'sudo docker logout'
+            sh 'docker logout'
             sh 'rm -f ${KUBE_CONFIG}'
         }
     }
