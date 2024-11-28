@@ -102,43 +102,44 @@ pipeline {
            }
        }
 
-       stage('Update Kubernetes Manifests') {
-           steps {
-               catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                   script {
-                       sh """
-                           git pull origin main
-                           mkdir -p k8s
-                           cat << EOF > k8s/deployment.yaml
+stage('Update Kubernetes Manifests') {
+    steps {
+        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+            script {
+                sh """
+                    git fetch origin
+                    git reset --hard origin/main
+                    mkdir -p k8s
+                    cat << EOF > k8s/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
- name: frontend-deployment
+  name: frontend-deployment
 spec:
- replicas: 1
- selector:
-   matchLabels:
-     app: frontend
- template:
-   metadata:
-     labels:
-       app: frontend
-   spec:
-     containers:
-     - name: frontend
-       image: 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
 EOF
-                           git config user.email "jenkins@example.com"
-                           git config user.name "Jenkins"
-                           git remote set-url origin https://${GIT_CREDENTIALS_USR}:${GIT_CREDENTIALS_PSW}@github.com/Coconut-Finance-Team/Coconut-Front-App.git
-                           git add k8s/deployment.yaml
-                           git commit -m "Update frontend deployment to version ${DOCKER_TAG}"
-                           git push origin main
-                       """
-                   }
-               }
-           }
-       }
+                    git config user.email "jenkins@example.com"
+                    git config user.name "Jenkins"
+                    git remote set-url origin https://${GIT_CREDENTIALS_USR}:${GIT_CREDENTIALS_PSW}@github.com/Coconut-Finance-Team/Coconut-Front-App.git
+                    git add k8s/deployment.yaml
+                    git commit -m "Update frontend deployment to version ${DOCKER_TAG}"
+                    git push origin main
+                """
+            }
+        }
+    }
+}
 
        stage('Sync ArgoCD Application') {
            steps {
