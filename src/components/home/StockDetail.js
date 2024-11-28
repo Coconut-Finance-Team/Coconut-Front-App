@@ -1,587 +1,752 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { createChart } from 'lightweight-charts';
-import * as S from './StockDetailStyles';
+import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import styled from 'styled-components';
+import StockChart from './StockChart';
 import skLogo from '../../assets/sk.png';
+import samsungLogo from '../../assets/samsung.png';
+import naverLogo from '../../assets/naver.png';
+
+const mockChartData = [
+  { time: '1', open: 17400, high: 17800, low: 17300, close: 17750, volume: 356971, buyVolume: 250000, sellVolume: 106971 },
+  { time: '2', open: 17750, high: 18200, low: 17600, close: 18050, volume: 423452, buyVolume: 323452, sellVolume: 100000 },
+  { time: '3', open: 18050, high: 18500, low: 17900, close: 18400, volume: 512345, buyVolume: 412345, sellVolume: 100000 },
+  { time: '4', open: 18400, high: 18600, low: 18000, close: 18100, volume: 602345, buyVolume: 202345, sellVolume: 400000 },
+  { time: '5', open: 18100, high: 18300, low: 17800, close: 17950, volume: 669234, buyVolume: 269234, sellVolume: 400000 },
+  { time: '6', open: 17950, high: 18200, low: 17750, close: 18100, volume: 445532, buyVolume: 345532, sellVolume: 100000 },
+  { time: '7', open: 18100, high: 18800, low: 18000, close: 18600, volume: 645742, buyVolume: 545742, sellVolume: 100000 },
+  { time: '8', open: 18600, high: 19200, low: 18500, close: 19100, volume: 756742, buyVolume: 656742, sellVolume: 100000 },
+  { time: '9', open: 19100, high: 19500, low: 18900, close: 19000, volume: 825742, buyVolume: 425742, sellVolume: 400000 },
+  { time: '10', open: 19000, high: 19200, low: 18500, close: 18650, volume: 672345, buyVolume: 272345, sellVolume: 400000 },
+  { time: '11', open: 18650, high: 19000, low: 18400, close: 18850, volume: 556742, buyVolume: 456742, sellVolume: 100000 },
+  { time: '12', open: 18850, high: 19400, low: 18700, close: 19300, volume: 745652, buyVolume: 645652, sellVolume: 100000 },
+  { time: '13', open: 19300, high: 20000, low: 19100, close: 19800, volume: 856345, buyVolume: 756345, sellVolume: 100000 },
+  { time: '14', open: 19800, high: 20500, low: 19600, close: 20300, volume: 965234, buyVolume: 865234, sellVolume: 100000 },
+  { time: '15', open: 20300, high: 20800, low: 20100, close: 20200, volume: 875742, buyVolume: 475742, sellVolume: 400000 },
+  { time: '16', open: 20200, high: 20500, low: 19800, close: 20000, volume: 812345, buyVolume: 312345, sellVolume: 500000 },
+  { time: '17', open: 20000, high: 20400, low: 19800, close: 20300, volume: 745600, buyVolume: 445600, sellVolume: 300000 },
+  { time: '18', open: 20300, high: 21000, low: 20200, close: 20800, volume: 925700, buyVolume: 825700, sellVolume: 100000 },
+  { time: '19', open: 20800, high: 21500, low: 20500, close: 21300, volume: 1056700, buyVolume: 956700, sellVolume: 100000 },
+  { time: '20', open: 21300, high: 21800, low: 21000, close: 21200, volume: 987600, buyVolume: 487600, sellVolume: 500000 },
+  { time: '21', open: 21200, high: 21400, low: 20800, close: 21000, volume: 856700, buyVolume: 356700, sellVolume: 500000 },
+  { time: '22', open: 21000, high: 21600, low: 20900, close: 21500, volume: 876500, buyVolume: 676500, sellVolume: 200000 },
+  { time: '23', open: 21500, high: 22000, low: 21400, close: 21800, volume: 945600, buyVolume: 845600, sellVolume: 100000 },
+  { time: '24', open: 21800, high: 22500, low: 21600, close: 22300, volume: 1075600, buyVolume: 975600, sellVolume: 100000 },
+  { time: '25', open: 22300, high: 23000, low: 22000, close: 22500, volume: 1156700, buyVolume: 956700, sellVolume: 200000 },
+  { time: '26', open: 22500, high: 23200, low: 22300, close: 23000, volume: 1234500, buyVolume: 1045000, sellVolume: 190000 },
+  { time: '27', open: 23000, high: 23500, low: 22700, close: 22800, volume: 987000, buyVolume: 487000, sellVolume: 500000 },
+  { time: '28', open: 22800, high: 23000, low: 22400, close: 22500, volume: 945600, buyVolume: 445600, sellVolume: 500000 },
+  { time: '29', open: 22500, high: 22800, low: 22000, close: 22200, volume: 876500, buyVolume: 376500, sellVolume: 500000 },
+  { time: '30', open: 22200, high: 23000, low: 22100, close: 22900, volume: 1056700, buyVolume: 856700, sellVolume: 200000 },
+  { time: '31', open: 22900, high: 23500, low: 22700, close: 23300, volume: 1156700, buyVolume: 1056700, sellVolume: 100000 },
+];
+
+
+const mockAskPrices = [
+  { price: 84300, quantity: 2358 },
+  { price: 84200, quantity: 1567 },
+  { price: 84100, quantity: 3242 },
+  { price: 84000, quantity: 4521 },
+  { price: 83900, quantity: 2876 },
+];
+
+const mockBidPrices = [
+  { price: 83800, quantity: 3654 },
+  { price: 83700, quantity: 2987 },
+  { price: 83600, quantity: 1876 },
+  { price: 83500, quantity: 2543 },
+  { price: 83400, quantity: 1932 },
+];
+
+const mockTradeData = [
+  { price: 84000, quantity: 121, change: 1.98, volume: 1873750, time: '13:37:12' },
+  { price: 83900, quantity: 235, change: 1.86, volume: 1873629, time: '13:37:08' },
+  { price: 83900, quantity: 95, change: 1.86, volume: 1873394, time: '13:37:05' },
+  { price: 84000, quantity: 178, change: 1.98, volume: 1873299, time: '13:37:01' },
+  { price: 83800, quantity: 324, change: 1.74, volume: 1873121, time: '13:36:58' },
+];
+
+const Container = styled.div`
+  display: flex;
+  gap: 20px;
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 16px;
+  font-family: 'Noto Sans KR', sans-serif;
+  box-sizing: border-box;
+  overflow-x: hidden;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    padding: 8px;
+    gap: 12px;
+  }
+`;
+
+const StockInfoContainer = styled.div`
+  flex: 3;
+  background: #ffffff;
+  border: 1px solid #f2f2f2;
+  border-radius: 16px;
+  padding: 16px;
+  box-sizing: border-box;
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    padding: 12px;
+  }
+`;
+
+const OrderBoxContainer = styled.div`
+  flex: 1;
+  min-width: 320px;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: #333;
+  box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.08);
+`;
+
+const Header = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+`;
+
+const StockLogo = styled.div`
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  object-fit: cover;
+`;
+
+const StockInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const StockTitle = styled.h2`
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+  margin: 0;
+`;
+
+const StockCode = styled.span`
+  font-size: 14px;
+  color: #8b95a1;
+`;
+
+const StockPrice = styled.div`
+  font-size: 28px;
+  font-weight: 700;
+  color: #333;
+  margin: 16px 0;
+`;
+
+const Tags = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+`;
+
+const Tag = styled.span`
+  font-size: 12px;
+  padding: 4px 8px;
+  background-color: #f2f2f2;
+  border-radius: 12px;
+  color: #8b95a1;
+`;
+
+const ChartContainer = styled.div`
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> f3846cd6b0455ab4c91ae1d4e6702747a7ab9e82
+  width: 100%;
+  height: 450px;
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin: 20px 0;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  
+  @media (max-width: 768px) {
+    height: 350px;
+    padding: 8px;
+  }
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> f3846cd6b0455ab4c91ae1d4e6702747a7ab9e82
+  width: 95%;
+  height: 100%;
+  max-height: 400px;
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+<<<<<<< HEAD
+  overflow: hidden; // 추가
+  transform: translateZ(0); // 추가
+  will-change: transform; // 추가
+>>>>>>> 1cc253567d1629fabc555f9096879e703085832a
+=======
+  overflow: hidden;
+  transform: translateZ(0); 
+  will-change: transform; 
+>>>>>>> f3846cd6b0455ab4c91ae1d4e6702747a7ab9e82
+`;
+
+const TableContainer = styled.div`
+  margin-top: 20px;
+  background-color: #f8f8f8;
+  border-radius: 8px;
+  padding: 16px;
+`;
+
+const TableHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+`;
+
+const DataTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+`;
+
+const Th = styled.th`
+  text-align: ${(props) => props.align || 'left'};
+  padding: 12px 8px;
+  color: #8b95a1;
+  font-weight: 400;
+  font-size: 13px;
+`;
+
+const Td = styled.td`
+  padding: 12px 8px;
+  font-size: 14px;
+  color: ${(props) => props.color || '#333'};
+  text-align: ${(props) => props.align || 'left'};
+  border-top: 1px solid #f2f2f2;
+`;
+
+const OrderTypeContainer = styled.div`
+  display: flex;
+  background: #F2F4F6;
+  border-radius: 14px;
+  padding: 4px;
+  height: 48px;
+`;
+
+const OrderTypeButton = styled.button`
+  flex: 1;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  background: ${(props) => (props.active ? '#fff' : 'transparent')};
+  color: ${(props) => (props.active ? '#333' : '#8B95A1')};
+  cursor: pointer;
+  box-shadow: ${(props) => (props.active ? '0px 1px 3px rgba(0, 0, 0, 0.1)' : 'none')};
+  transition: all 0.2s ease;
+`;
+
+const PriceTypeContainer = styled.div`
+  display: flex;
+  gap: 8px;
+  width: 100%;
+
+  button {
+    flex: 1;
+    height: 48px;
+    padding: 0;
+    border: none;
+    border-radius: 14px;
+    background: #F2F4F6;
+    font-size: 15px;
+    color: #8B95A1;
+    cursor: pointer;
+
+    &.active {
+      color: #333;
+    }
+  }
+`;
+
+const PriceInput = styled.div`
+  width: 90%;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  background: #F2F4F6;
+  border-radius: 14px;
+  padding: 0 16px;
+
+  input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-size: 15px;
+    text-align: right;
+    color: #333;
+    
+    &:focus {
+      outline: none;
+    }
+  }
+
+  span {
+    color: #333;
+    margin-left: 4px;
+  }
+`;
+
+const QuantityContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 48px;
+
+  span {
+    font-size: 15px;
+    color: #333;
+    min-width: 40px;
+  }
+`;
+
+const QuantityInputContainer = styled.div`
+  flex: 1;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  background: #F2F4F6;
+  border-radius: 14px;
+  padding: 0 8px;
+
+  input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-size: 15px;
+    text-align: right;
+    color: #333;
+    padding: 0 8px;
+    
+    &:focus {
+      outline: none;
+    }
+  }
+
+  button {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: #8B95A1;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+`;
+
+const PercentageContainer = styled.div`
+  display: flex;
+  gap: 8px;
+  width: 100%;
+`;
+
+const PercentButton = styled.button`
+  flex: 1;
+  height: 48px;
+  border: 1px solid #E5E8EB;
+  border-radius: 10px;
+  background: #fff;
+  color: #333;
+  font-size: 14px;
+  cursor: pointer;
+
+  &:hover {
+    background: #F8F9FA;
+  }
+`;
+
+const InfoList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 0;
+  border-top: 1px solid #F2F4F6;
+  border-bottom: 1px solid #F2F4F6;
+  
+  div {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: #666;
+  }
+`;
+
+const OrderButton = styled.button`
+  width: 100%;
+  height: 48px;
+  border: none;
+  border-radius: 14px;
+  background: ${(props) => (props.buy ? '#FF4D4D' : '#4D4DFF')};
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease;
+
+  &:hover {
+    background: ${(props) => (props.buy ? '#FF3B3B' : '#3B4DFF')};
+  }
+`;
 
 function StockDetail() {
-  const { stockId } = useParams();
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('chart');
-  const [timeframe, setTimeframe] = useState('1min');
-  const [orderType, setOrderType] = useState('buy');
-  const [orderPrice, setOrderPrice] = useState(0);
-  const [quantity, setQuantity] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [primaryAccountId, setPrimaryAccountId] = useState(null);
-  const [priceChange, setPriceChange] = useState({ value: 0, percent: 0 });
-  
-  const chartContainerRef = useRef(null);
-  const chartRef = useRef(null);
-  const candleSeriesRef = useRef(null);
-  const volumeSeriesRef = useRef(null);
-  const ma5SeriesRef = useRef(null);
-  const ma10SeriesRef = useRef(null);
-  const ma20SeriesRef = useRef(null);
-  const wsRef = useRef(null);
-  const currentCandleRef = useRef(null);
+  const location = useLocation();
+  const stock = location.state?.stock;
+  const stockCode = stock?.code || '064350';
 
-  const parseAndFormatData = (data) => ({
-    time: data.time ? Math.floor(new Date(data.time).getTime() / 1000) : 
-      Math.floor(new Date().getTime() / 1000),
-    open: parseFloat(data.openPrice),
-    high: parseFloat(data.highPrice),
-    low: parseFloat(data.lowPrice),
-    close: parseFloat(data.currentPrice),
-    volume: parseFloat(data.contingentVol)
+  const [orderType, setOrderType] = useState('buy');
+  const [priceType, setPriceType] = useState('limit');
+  const [orderPrice, setOrderPrice] = useState(stock?.price || 63300);
+  const [quantity, setQuantity] = useState(0);
+  const [account, setAccount] = useState({
+    balance: 10000000, // 1천만원
+    stocks: {
+      [stockCode]: {
+        quantity: 100,
+        averagePrice: 83000,
+      },
+    },
   });
 
-  const parseWSData = (data) => {
-    const [hours, minutes, seconds] = [
-      data.time.slice(0, 2),
-      data.time.slice(2, 4),
-      data.time.slice(4, 6)
-    ].map(Number);
+  const currentStock = account.stocks[stockCode];
 
-    const now = new Date();
-    now.setHours(hours, minutes, seconds, 0);
+  if (!stock) {
+    return <div>주식 정보를 불러오는 중입니다...</div>;
+  }
 
-    return {
-      time: Math.floor(now.getTime() / 1000),
-      open: parseFloat(data.openPrice),
-      high: parseFloat(data.highPrice),
-      low: parseFloat(data.lowPrice),
-      close: parseFloat(data.currentPrice),
-      volume: parseFloat(data.contingentVol)
-    };
+  // 주문 가능 수량 계산
+  const getMaxQuantity = () => {
+    return orderType === 'buy'
+      ? Math.floor(account.balance / orderPrice)
+      : currentStock.quantity;
   };
 
-  const processCandles = (data, interval) => {
-    const periodSeconds = interval === '1min' ? 60 : 600;
-    const groupedData = {};
-
-    data.forEach(candle => {
-      const periodTimestamp = Math.floor(candle.time / periodSeconds) * periodSeconds;
-      
-      if (!groupedData[periodTimestamp]) {
-        groupedData[periodTimestamp] = {
-          time: periodTimestamp,
-          open: candle.open,
-          high: candle.high,
-          low: candle.low,
-          close: candle.close,
-          volume: candle.volume
-        };
-      } else {
-        const existing = groupedData[periodTimestamp];
-        existing.high = Math.max(existing.high, candle.high);
-        existing.low = Math.min(existing.low, candle.low);
-        existing.close = candle.close;
-        existing.volume += candle.volume;
-      }
-    });
-
-    return Object.values(groupedData).sort((a, b) => a.time - b.time);
+  // 수량 변경 핸들러
+  const handleQuantityChange = (value) => {
+    const maxQty = getMaxQuantity();
+    const newQty = Math.max(0, Math.min(value, maxQty));
+    setQuantity(newQty);
   };
 
-  const calculateMA = (data, period) => {
-    const result = [];
-    for (let i = 0; i < data.length; i++) {
-      if (i < period - 1) continue;
-      
-      const sum = data.slice(i - period + 1, i + 1)
-        .reduce((acc, cur) => acc + cur.close, 0);
-      
-      result.push({
-        time: data[i].time,
-        value: sum / period
-      });
-    }
-    return result;
+  // 퍼센트 버튼 핸들러
+  const handlePercentage = (percent) => {
+    const maxQty = getMaxQuantity();
+    const newQty = Math.floor(maxQty * (percent / 100));
+    setQuantity(newQty);
   };
 
-  useEffect(() => {
-    if (!chartContainerRef.current) return;
-
-    const chart = createChart(chartContainerRef.current, {
-      width: chartContainerRef.current.clientWidth,
-      height: chartContainerRef.current.clientHeight,
-      layout: {
-        background: { color: '#ffffff' },
-        textColor: '#333333',
-        fontFamily: 'Noto Sans KR',
-      },
-      grid: {
-        vertLines: { color: 'rgba(240, 243, 250, 0.5)' },
-        horzLines: { color: 'rgba(240, 243, 250, 0.5)' },
-      },
-      crosshair: {
-        mode: 0,
-        vertLine: {
-          color: '#C4C4C4',
-          width: 0.5,
-          style: 1,
-        },
-        horzLine: {
-          color: '#C4C4C4',
-          width: 0.5,
-          style: 1,
-        },
-      },
-      rightPriceScale: {
-        borderVisible: false,
-        scaleMargins: {
-          top: 0.1,
-          bottom: 0.1,
-        },
-        autoScale: true,  // 자동 스케일링
-        mode: 2,  // 가격 스케일 모드
-        alignLabels: true,
-      },
-      timeScale: {
-        borderVisible: false,
-        timeVisible: true,
-        secondsVisible: false,
-      },
-    });
-
-    const candleSeries = chart.addCandlestickSeries({
-      upColor: '#ff4747',
-      downColor: '#4788ff',
-      borderUpColor: '#ff4747',
-      borderDownColor: '#4788ff',
-      wickUpColor: '#ff4747',
-      wickDownColor: '#4788ff',
-      priceFormat: {
-        type: 'price',
-        precision: 0,
-        minMove: 50,
-      },
-    });
-
-    const volumeSeries = chart.addHistogramSeries({
-      priceFormat: { type: 'volume' },
-      priceScaleId: '',
-      scaleMargins: {
-        top: 0.8,
-        bottom: 0,
-      },
-    });
-
-    const ma5Series = chart.addLineSeries({
-      color: 'rgba(255, 82, 82, 0.8)',
-      lineWidth: 1,
-      title: 'MA5',
-    });
-
-    const ma10Series = chart.addLineSeries({
-      color: 'rgba(66, 133, 244, 0.8)',
-      lineWidth: 1,
-      title: 'MA10',
-    });
-
-    const ma20Series = chart.addLineSeries({
-      color: 'rgba(251, 188, 4, 0.8)',
-      lineWidth: 1,
-      title: 'MA20',
-    });
-
-    chartRef.current = chart;
-    candleSeriesRef.current = candleSeries;
-    volumeSeriesRef.current = volumeSeries;
-    ma5SeriesRef.current = ma5Series;
-    ma10SeriesRef.current = ma10Series;
-    ma20SeriesRef.current = ma20Series;
-
-    const handleResize = () => {
-      chart.applyOptions({
-        width: chartContainerRef.current.clientWidth,
-        height: chartContainerRef.current.clientHeight,
-      });
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      chart.remove();
-    };
-  }, []);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch(`http://localhost:8080/api/v1/stock/${stockId}/charts/${timeframe}`);
-        const data = await response.json();
-
-        if (!Array.isArray(data) || data.length === 0) {
-          setIsLoading(false);
-          return;
-        }
-
-        const parsedData = data.map(parseAndFormatData);
-        const processedData = processCandles(parsedData, timeframe);
-
-        // 이동평균선 계산
-        const ma5Data = calculateMA(processedData, 5);
-        const ma10Data = calculateMA(processedData, 10);
-        const ma20Data = calculateMA(processedData, 20);
-
-        // 데이터 설정
-        candleSeriesRef.current.setData(processedData);
-        ma5SeriesRef.current.setData(ma5Data);
-        ma10SeriesRef.current.setData(ma10Data);
-        ma20SeriesRef.current.setData(ma20Data);
-
-        // 거래량 데이터 설정
-        const volumeData = processedData.map(d => ({
-          time: d.time,
-          value: d.volume,
-          color: d.close >= d.open ? 'rgba(255, 71, 71, 0.3)' : 'rgba(71, 136, 255, 0.3)',
-        }));
-        volumeSeriesRef.current.setData(volumeData);
-
-        // 현재가 및 변동률 설정
-        if (processedData.length > 0) {
-          const lastCandle = processedData[processedData.length - 1];
-          const prevCandle = processedData[processedData.length - 2];
-          
-          setOrderPrice(lastCandle.close);
-          if (prevCandle) {
-            const change = lastCandle.close - prevCandle.close;
-            const changePercent = (change / prevCandle.close) * 100;
-            setPriceChange({ value: change, percent: changePercent });
-          }
-          
-          currentCandleRef.current = lastCandle;
-        }
-
-        chartRef.current.timeScale().fitContent();
-        setIsLoading(false);
-
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [stockId, timeframe]);
-
-  // ... 이전 코드에 이어서
-
-  useEffect(() => {
-    if (isLoading) return;
-
-    const connectWebSocket = () => {
-      wsRef.current = new WebSocket(`ws://localhost:8080/ws/stock/${stockId}`);
-      
-      wsRef.current.onopen = () => {
-        console.log('WebSocket Connected');
-      };
-
-      wsRef.current.onmessage = (event) => {
-        try {
-          const newData = JSON.parse(event.data);
-          const parsed = parseWSData(newData);
-          const interval = timeframe === '1min' ? 60 : 600;
-          const currentPeriodStart = Math.floor(parsed.time / interval) * interval;
-
-          if (currentCandleRef.current && 
-              Math.floor(currentCandleRef.current.time / interval) === Math.floor(currentPeriodStart / interval)) {
-            // 현재 봉 업데이트
-            const updatedCandle = {
-              time: currentCandleRef.current.time,
-              open: currentCandleRef.current.open,
-              high: Math.max(currentCandleRef.current.high, parsed.high),
-              low: Math.min(currentCandleRef.current.low, parsed.low),
-              close: parsed.close,
-              volume: currentCandleRef.current.volume + parsed.volume
-            };
-
-            candleSeriesRef.current.update(updatedCandle);
-            volumeSeriesRef.current.update({
-              time: updatedCandle.time,
-              value: updatedCandle.volume,
-              color: updatedCandle.close >= updatedCandle.open 
-                ? 'rgba(255, 71, 71, 0.3)' 
-                : 'rgba(71, 136, 255, 0.3)',
-            });
-
-            currentCandleRef.current = updatedCandle;
-
-          } else {
-            // 새로운 봉 생성
-            const newCandle = {
-              time: currentPeriodStart,
-              open: parsed.close,
-              high: parsed.close,
-              low: parsed.close,
-              close: parsed.close,
-              volume: parsed.volume
-            };
-
-            candleSeriesRef.current.update(newCandle);
-            volumeSeriesRef.current.update({
-              time: currentPeriodStart,
-              value: parsed.volume,
-              color: 'rgba(255, 71, 71, 0.3)',
-            });
-
-            currentCandleRef.current = newCandle;
-          }
-
-          // 가격 변동 계산
-          if (currentCandleRef.current) {
-            const change = parsed.close - currentCandleRef.current.open;
-            const changePercent = (change / currentCandleRef.current.open) * 100;
-            setPriceChange({ value: change, percent: changePercent });
-          }
-
-          setOrderPrice(parsed.close);
-
-        } catch (error) {
-          console.error('Error processing WebSocket data:', error);
-        }
-      };
-
-      wsRef.current.onclose = () => {
-        console.log('WebSocket Disconnected');
-        setTimeout(connectWebSocket, 3000);
-      };
-
-      wsRef.current.onerror = (error) => {
-        console.error('WebSocket Error:', error);
-      };
-    };
-
-    connectWebSocket();
-
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-    };
-  }, [isLoading, stockId, timeframe]);
-
-  useEffect(() => {
-    const token = localStorage.getItem('jwtToken');
-    if (token) {
-      setIsAuthenticated(true);
-      fetchUserData(token);
-    }
-  }, []);
-
-  const fetchUserData = async (token) => {
-    try {
-      const response = await axios.get('http://localhost:8080/api/v1/users/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const accountId = response.data.primaryAccountId;
-      if (accountId) {
-        setPrimaryAccountId(accountId);
-      }
-    } catch (error) {
-      console.error('사용자 정보 조회 실패:', error);
-      if (error.response?.status === 401) {
-        setIsAuthenticated(false);
-        localStorage.removeItem('jwtToken');
-      }
-    }
-  };
-
-  const handleOrder = async () => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-
-    if (!primaryAccountId) {
-      alert('계좌 정보가 필요합니다.');
-      return;
-    }
-
-    if (quantity <= 0) {
+  // 주문 처리
+  const handleOrder = () => {
+    if (quantity === 0) {
       alert('주문 수량을 입력해주세요.');
       return;
     }
 
-    try {
-      const token = localStorage.getItem('jwtToken');
-      const orderDTO = {
-        stockCode: stockId,
-        orderQuantity: Number(quantity),
-        orderPrice: Number(orderPrice),
-      };
+    const totalAmount = orderPrice * quantity;
 
-      const response = await axios.post(
-        `http://localhost:8080/api/v1/${orderType}-order`,
-        orderDTO,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      
-      if (response.status === 200) {
-        alert(`${quantity}주 ${orderType === 'buy' ? '매수' : '매도'} 주문이 완료되었습니다.`);
-        setQuantity(0);
+    if (orderType === 'buy') {
+      if (totalAmount > account.balance) {
+        alert('잔액이 부족합니다.');
+        return;
       }
-    } catch (error) {
-      console.error('주문 처리 실패:', error);
-      alert(error.response?.data?.message || '주문 처리 중 오류가 발생했습니다.');
-    }
-  };
 
-  const handleQuantityPercent = (percent) => {
-    // 최대 주문 가능 수량 계산 로직 추가 필요
-    const maxQuantity = Math.floor(10000000 / orderPrice); // 예시: 1000만원 기준
-    setQuantity(Math.floor(maxQuantity * (percent / 100)));
+      // 구매 처리
+      setAccount((prev) => {
+        const newTotalQty = currentStock.quantity + quantity;
+        const newAveragePrice =
+          (currentStock.quantity * currentStock.averagePrice + quantity * orderPrice) / newTotalQty;
+
+        return {
+          ...prev,
+          balance: prev.balance - totalAmount,
+          stocks: {
+            ...prev.stocks,
+            [stockCode]: {
+              quantity: newTotalQty,
+              averagePrice: newAveragePrice,
+            },
+          },
+        };
+      });
+
+      alert(`${quantity}주 매수 주문이 완료되었습니다.`);
+    } else if (orderType === 'sell') {
+      if (quantity > currentStock.quantity) {
+        alert('보유 수량이 부족합니다.');
+        return;
+      }
+
+      // 판매 처리
+      setAccount((prev) => {
+        const newQty = currentStock.quantity - quantity;
+
+        return {
+          ...prev,
+          balance: prev.balance + totalAmount,
+          stocks: {
+            ...prev.stocks,
+            [stockCode]: {
+              quantity: newQty,
+              averagePrice: newQty === 0 ? 0 : currentStock.averagePrice,
+            },
+          },
+        };
+      });
+
+      alert(`${quantity}주 매도 주문이 완료되었습니다.`);
+    }
+
+    // 주문 완료 후 초기화
+    setQuantity(0);
   };
 
   return (
-    <S.Container>
-      <S.StockInfoContainer>
-        <S.Header>
-          <S.StockInfo>
-            <S.StockLogo src={skLogo} alt="SK하이닉스" />
-            <S.StockTitleArea>
-              <S.StockTitle>SK하이닉스</S.StockTitle>
-              <S.StockCode>{stockId}</S.StockCode>
-            </S.StockTitleArea>
-          </S.StockInfo>
-          <S.PriceArea>
-            <S.CurrentPrice change={priceChange.value}>
-              {orderPrice.toLocaleString()}
-            </S.CurrentPrice>
-            <S.PriceChange value={priceChange.value}>
-              {priceChange.value > 0 ? '+' : ''}{priceChange.value.toLocaleString()}원 
-              ({priceChange.value > 0 ? '+' : ''}{priceChange.percent.toFixed(2)}%)
-            </S.PriceChange>
-          </S.PriceArea>
-        </S.Header>
+    <Container>
+      <StockInfoContainer>
+      <Header>
+      <StockLogo
+        as="img"
+        src={
+          stock.name === 'SK하이닉스'
+            ? skLogo
+            : stock.name === '삼성전자'
+            ? samsungLogo
+            : naverLogo
+        }
+        alt={stock.name}
+      />
+      <StockInfo>
+        <StockTitle>{stock.name}</StockTitle>
+        <StockCode>{stock.code}</StockCode>
+      </StockInfo>
+    </Header>
+        <StockPrice>{stock.price.toLocaleString()}원</StockPrice>
+        <Tags>
+          <Tag>차트</Tag>
+          <Tag>호가</Tag>
+          <Tag>종목정보</Tag>
+        </Tags>
 
-        <S.TabContainer>
-          <S.TabButton 
-            active={activeTab === 'chart'} 
-            onClick={() => setActiveTab('chart')}
-          >
-            차트
-          </S.TabButton>
-          <S.TabButton 
-            active={activeTab === 'orderbook'} 
-            onClick={() => setActiveTab('orderbook')}
-          >
-            호가
-          </S.TabButton>
-          <S.TabButton 
-            active={activeTab === 'info'} 
-            onClick={() => setActiveTab('info')}
-          >
-            종목정보
-          </S.TabButton>
-        </S.TabContainer>
+        <ChartContainer>
+          <StockChart data={mockChartData} />
+        </ChartContainer>
 
-        <S.TimeframeButtons>
-          <S.TimeButton 
-            active={timeframe === '1min'} 
-            onClick={() => setTimeframe('1min')}
-          >
-            1분
-          </S.TimeButton>
-          <S.TimeButton 
-            active={timeframe === '10min'} 
-            onClick={() => setTimeframe('10min')}
-          >
-            10분
-          </S.TimeButton>
-        </S.TimeframeButtons>
+        {/* 호가 정보 */}
+        <TableContainer>
+          <TableHeader>
+            <div>호가 정보</div>
+          </TableHeader>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <DataTable style={{ width: '48%' }}>
+              <thead>
+                <tr>
+                  <Th>매도호가</Th>
+                  <Th align="right">잔량</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {mockAskPrices.map((item, i) => (
+                  <tr key={i}>
+                    <Td
+                      color={orderPrice === item.price ? '#FF4D4D' : undefined}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setOrderPrice(item.price)}
+                    >
+                      {item.price.toLocaleString()}원
+                    </Td>
+                    <Td align="right">{item.quantity.toLocaleString()}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
+            <DataTable style={{ width: '48%' }}>
+              <thead>
+                <tr>
+                  <Th>매수호가</Th>
+                  <Th align="right">잔량</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {mockBidPrices.map((item, i) => (
+                  <tr key={i}>
+                    <Td
+                      color={orderPrice === item.price ? '#FF4D4D' : undefined}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setOrderPrice(item.price)}
+                    >
+                      {item.price.toLocaleString()}원
+                    </Td>
+                    <Td align="right">{item.quantity.toLocaleString()}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
+          </div>
+        </TableContainer>
 
-        <S.ChartContainer ref={chartContainerRef} />
-      </S.StockInfoContainer>
+        {/* 체결 내역 */}
+        <TableContainer>
+          <TableHeader>
+            <div>일별 · 실시간 시세</div>
+            <div>실시간</div>
+          </TableHeader>
+          <DataTable>
+            <thead>
+              <tr>
+                <Th>체결가</Th>
+                <Th align="right">체결량(주)</Th>
+                <Th align="right">등락률</Th>
+                <Th align="right">거래량(주)</Th>
+                <Th align="right">시간</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {mockTradeData.map((trade, i) => (
+                <tr key={i}>
+                  <Td>{trade.price.toLocaleString()}원</Td>
+                  <Td align="right">{trade.quantity}</Td>
+                  <Td align="right" color={trade.change >= 0 ? '#FF4D4D' : '#4D4DFF'}>
+                    {trade.change >= 0 ? '+' : ''}
+                    {trade.change}%
+                  </Td>
+                  <Td align="right">{trade.volume.toLocaleString()}</Td>
+                  <Td align="right">{trade.time}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </DataTable>
+        </TableContainer>
+      </StockInfoContainer>
 
-      <S.OrderBoxContainer>
-        <S.OrderTypeContainer>
-          <S.OrderTypeButton
+      <OrderBoxContainer>
+        <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0' }}>주문하기</h3>
+
+        <OrderTypeContainer>
+          <OrderTypeButton
             active={orderType === 'buy'}
-            buy={true}
             onClick={() => {
               setOrderType('buy');
               setQuantity(0);
             }}
           >
-            매수
-          </S.OrderTypeButton>
-          <S.OrderTypeButton
+            구매
+          </OrderTypeButton>
+          <OrderTypeButton
             active={orderType === 'sell'}
-            buy={false}
             onClick={() => {
               setOrderType('sell');
               setQuantity(0);
             }}
           >
-            매도
-          </S.OrderTypeButton>
-        </S.OrderTypeContainer>
+            판매
+          </OrderTypeButton>
+        </OrderTypeContainer>
 
-        <S.InputContainer>
-          <S.InputLabel>주문가격</S.InputLabel>
-          <S.PriceInput>
-            <input
-              type="text"
-              value={orderPrice.toLocaleString()}
-              readOnly
-            />
-            <span>원</span>
-          </S.PriceInput>
-        </S.InputContainer>
+        <PriceTypeContainer>
+          <button
+            className={priceType === 'limit' ? 'active' : ''}
+            onClick={() => setPriceType('limit')}
+          >
+            지정가
+          </button>
+          <button
+            className={priceType === 'market' ? 'active' : ''}
+            onClick={() => setPriceType('market')}
+          >
+            시장가
+          </button>
+        </PriceTypeContainer>
 
-        <S.InputContainer>
-          <S.InputLabel>주문수량</S.InputLabel>
-          <S.PriceInput>
+        <PriceInput>
+          <input type="text" value={orderPrice.toLocaleString()} readOnly />
+          <span>원</span>
+        </PriceInput>
+
+        <QuantityContainer>
+          <span>수량</span>
+          <QuantityInputContainer>
+            <button onClick={() => handleQuantityChange(quantity - 1)}>-</button>
             <input
               type="number"
               value={quantity}
-              onChange={(e) => setQuantity(Math.max(0, parseInt(e.target.value) || 0))}
               min="0"
+              step="1"
+              onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 0)}
             />
-            <span>주</span>
-          </S.PriceInput>
-          <S.QuantityButtons>
-            <S.QuantityButton onClick={() => handleQuantityPercent(10)}>10%</S.QuantityButton>
-            <S.QuantityButton onClick={() => handleQuantityPercent(25)}>25%</S.QuantityButton>
-            <S.QuantityButton onClick={() => handleQuantityPercent(50)}>50%</S.QuantityButton>
-            <S.QuantityButton onClick={() => handleQuantityPercent(100)}>최대</S.QuantityButton>
-          </S.QuantityButtons>
-        </S.InputContainer>
+            <button onClick={() => handleQuantityChange(quantity + 1)}>+</button>
+          </QuantityInputContainer>
+        </QuantityContainer>
 
-        <S.OrderSummary>
+        <PercentageContainer>
+          <PercentButton onClick={() => handlePercentage(10)}>10%</PercentButton>
+          <PercentButton onClick={() => handlePercentage(25)}>25%</PercentButton>
+          <PercentButton onClick={() => handlePercentage(50)}>50%</PercentButton>
+          <PercentButton onClick={() => handlePercentage(100)}>최대</PercentButton>
+        </PercentageContainer>
+
+        <InfoList>
           <div>
-            <span>주문가능금액</span>
-            <span>10,000,000원</span>
+            <span>내 보유량</span>
+            <span>{currentStock.quantity}주</span>
           </div>
           <div>
-            <span>총 주문금액</span>
+            <span>내 주식 평균가</span>
+            <span>{currentStock.averagePrice.toLocaleString()}원</span>
+          </div>
+          <div>
+            <span>{orderType === 'buy' ? '주문 가능 금액' : '보유 수량'}</span>
+            <span>
+              {orderType === 'buy'
+                ? `${account.balance.toLocaleString()}원`
+                : `${currentStock.quantity}주`}
+            </span>
+          </div>
+          <div>
+            <span>총 주문 금액</span>
             <span>{(orderPrice * quantity).toLocaleString()}원</span>
           </div>
-        </S.OrderSummary>
+        </InfoList>
 
-        <S.OrderButton 
-          onClick={handleOrder}
-          buy={orderType === 'buy'}
-          disabled={quantity <= 0}
-        >
-          {orderType === 'buy' ? '매수하기' : '매도하기'}
-        </S.OrderButton>
-      </S.OrderBoxContainer>
-    </S.Container>
+        <OrderButton onClick={handleOrder} buy={orderType === 'buy'}>
+          {orderType === 'buy' ? '구매하기' : '판매하기'}
+        </OrderButton>
+      </OrderBoxContainer>
+    </Container>
   );
 }
 

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FormContainer,
   Title,
@@ -49,13 +48,10 @@ const ViewButton = styled.button`
 `;
 
 function Step2Terms({ onNext, onPrev, formData, updateFormData }) {
-  const location = useLocation();
-  const navigate = useNavigate();
   const [allChecked, setAllChecked] = useState(false);
-  const prevFormData = location.state || {};
   
   const terms = [
-    { id: 'term1', title: '코코넛증권 종합약관', required: true },
+    { id: 'term1', title: '토스증권 종합약관', required: true },
     { id: 'term2', title: '전자금융거래 이용약관', required: true },
     { id: 'term3', title: '개인정보 수집 및 이용 동의', required: true },
     { id: 'term4', title: '마케팅 정보 수신 동의', required: false },
@@ -72,30 +68,15 @@ function Step2Terms({ onNext, onPrev, formData, updateFormData }) {
   const handleSingleCheck = (termId) => {
     const newTermsAgreed = formData.termsAgreed.includes(termId)
       ? formData.termsAgreed.filter(id => id !== termId)
-      : [...(formData.termsAgreed || []), termId];
+      : [...formData.termsAgreed, termId];
     
-    console.log('Updating terms:', newTermsAgreed);
-    
-    updateFormData({
-      termsAgreed: newTermsAgreed
-    });
+    updateFormData({ termsAgreed: newTermsAgreed });
     setAllChecked(newTermsAgreed.length === terms.length);
   };
 
   const canProceed = terms
     .filter(term => term.required)
     .every(term => formData.termsAgreed.includes(term.id));
-
-    const handleNext = () => {
-      if (canProceed) {
-        const newFormData = {
-          ...prevFormData,
-          termsAgreed: formData.termsAgreed
-        };
-        updateFormData(newFormData);
-        onNext();
-      }
-    };
 
   return (
     <FormContainer>

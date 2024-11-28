@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 const styles = `
   .user-detail-container {
@@ -95,9 +95,42 @@ const styles = `
     background-color: white;
   }
 
+  .activity-item {
+    display: grid;
+    grid-template-columns: 150px 1fr 200px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    transition: background-color 0.2s;
+  }
+
+  .activity-item:hover {
+    background-color: #f8fafc;
+  }
+
+  .activity-item:last-child {
+    border-bottom: none;
+  }
+
+  .activity-time {
+    color: #64748b;
+    font-size: 14px;
+  }
+
+  .activity-description {
+    color: #1e293b;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .activity-detail {
+    color: #64748b;
+    font-size: 14px;
+    text-align: right;
+  }
+
   .contract-item {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     padding: 12px 16px;
     border-bottom: 1px solid #e2e8f0;
     font-size: 14px;
@@ -123,11 +156,6 @@ const styles = `
 
   .delete-button:hover {
     background-color: #fee2e2;
-  }
-
-  .delete-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 
   .modal-overlay {
@@ -175,140 +203,39 @@ const styles = `
   .modal-button:hover {
     background-color: #2563eb;
   }
-
-  .error-message {
-    background-color: #fee2e2;
-    color: #dc2626;
-    padding: 12px;
-    border-radius: 6px;
-    margin-bottom: 16px;
-    font-size: 14px;
-  }
-
-  .loading {
-    text-align: center;
-    padding: 24px;
-    color: #64748b;
-    font-size: 14px;
-  }
 `;
 
-const UserDetail = ({ user, onBack }) => {
-  const [userDetail, setUserDetail] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+const UserDetail = ({ onBack }) => {
   const [showModal, setShowModal] = useState(false);
-  const [suspendLoading, setSuspendLoading] = useState(false);
 
-  const fetchUserDetail = async () => {
-    const token = localStorage.getItem('jwtToken');
-    
-    try {
-      setLoading(true);
-      const response = await fetch(`http://localhost:8080/api/v1/admin/read/user/${user.uuid}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('사용자 상세 정보를 불러오는데 실패했습니다.');
-      }
-
-      const data = await response.json();
-      console.log('User Detail Response:', data);
-      setUserDetail(data);
-      setError(null);
-    } catch (err) {
-      console.error('API Error:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  const userDetail = {
+    name: '홍길동',
+    email: 'hong@example.com',
+    phone: '010-1234-5678',
+    registerDate: '2024.03.15',
+    status: '활성',
+    lastAccess: '2024.03.28 14:23',
+    contract: {
+      number: '123-456-789',
+      date: '2024.03.15',
+      amount: '1,234,567원',
+      status: '활성'
+    },
+    activities: [
+      { time: '2024.03.28 14:23', description: '로그인', detail: 'IP: 123.456.789.0' },
+      { time: '2024.03.28 11:45', description: '주문', detail: '삼성전자 10주 매수' },
+      { time: '2024.03.27 16:30', description: '로그아웃', detail: '-' }
+    ]
   };
 
-  useEffect(() => {
-    if (user?.uuid) {
-      fetchUserDetail();
-    }
-  }, [user?.uuid]);
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    });
+  const handleTradeStop = () => {
+    setShowModal(true);
   };
-
-  const formatStatus = (status) => {
-    switch (status?.toUpperCase()) {
-      case 'SUSPENDED':
-        return '비활성';
-      case 'OPEN':
-      case 'ACTIVE':
-      default:
-        return '활성';
-    }
-  };
-
-  const handleTradeStop = async () => {
-    const token = localStorage.getItem('jwtToken');
-    setSuspendLoading(true);
-  
-    try {
-      const response = await fetch(`/api/v1/admin/suspend/user/${user.uuid}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-  
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage;
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || '거래정지 처리에 실패했습니다.';
-        } catch (e) {
-          errorMessage = '거래정지 처리에 실패했습니다.';
-        }
-        throw new Error(errorMessage);
-      }
-  
-      await fetchUserDetail();
-      setShowModal(true);
-    } catch (err) {
-      console.error('Error:', err);
-      setError(err.message);
-    } finally {
-      setSuspendLoading(false);
-    }
-  };
-
-  if (loading) {
-    return <div className="loading">데이터를 불러오는 중...</div>;
-  }
-
-  if (!userDetail) {
-    return <div className="error-message">사용자 정보를 찾을 수 없습니다.</div>;
-  }
-
-  // 계좌 및 상태 관련 데이터
-  const accountInfo = userDetail.accountInfo || {};
-  const userStatus = userDetail.status;
-  const accountStatus = accountInfo.accountStatus;
-  const isAccountSuspended = userStatus === 'SUSPENDED';
-  const hasAccount = !!accountInfo.accountId;
 
   return (
     <>
       <style>{styles}</style>
       <div className="user-detail-container">
-        {error && <div className="error-message">{error}</div>}
-        
         <button className="back-button" onClick={onBack}>
           <svg 
             viewBox="0 0 24 24" 
@@ -330,7 +257,7 @@ const UserDetail = ({ user, onBack }) => {
           <div className="info-grid">
             <div className="info-item">
               <div className="info-label">이름</div>
-              <div className="info-value">{userDetail.username}</div>
+              <div className="info-value">{userDetail.name}</div>
             </div>
             <div className="info-item">
               <div className="info-label">이메일</div>
@@ -342,65 +269,55 @@ const UserDetail = ({ user, onBack }) => {
             </div>
             <div className="info-item">
               <div className="info-label">가입일</div>
-              <div className="info-value">{formatDate(userDetail.createTime)}</div>
+              <div className="info-value">{userDetail.registerDate}</div>
             </div>
             <div className="info-item">
-              <div className="info-label">성별</div>
-              <div className="info-value">{userDetail.gender === 'male' ? '남성' : '여성'}</div>
-            </div>
-            <div className="info-item">
-              <div className="info-label">직장</div>
-              <div className="info-value">{userDetail.job}</div>
-            </div>
-            <div className="info-item">
-              <div className="info-label">투자 성향</div>
-              <div className="info-value">{userDetail.investmentStyle}</div>
+              <div className="info-label">마지막 로그인</div>
+              <div className="info-value">{userDetail.lastAccess}</div>
             </div>
             <div className="info-item">
               <div className="info-label">회원 상태</div>
               <div className="info-value">
-                <span className={`status-badge ${isAccountSuspended ? 'inactive' : ''}`}>
-                  {formatStatus(userStatus)}
-                </span>
+                <span className="status-badge">{userDetail.status}</span>
               </div>
             </div>
           </div>
         </div>
 
         <div className="section">
-          <h2 className="section-title">계좌 정보</h2>
+          <h2 className="section-title">계약 정보</h2>
           <div className="activity-list">
             <div className="contract-item header">
-              <div>계좌번호</div>
+              <div>계약번호</div>
+              <div>계약일</div>
               <div>상태</div>
               <div>관리</div>
             </div>
             <div className="contract-item">
+              <div>{userDetail.contract.number}</div>
+              <div>{userDetail.contract.date}</div>
               <div>
-                {hasAccount ? (
-                  <>
-                    {accountInfo.accountId}
-                    {accountInfo.accountName && ` (${accountInfo.accountName})`}
-                  </>
-                ) : '계좌 정보 없음'}
+                <span className="status-badge">{userDetail.contract.status}</span>
               </div>
               <div>
-                <span className={`status-badge ${isAccountSuspended ? 'inactive' : ''}`}>
-                  {formatStatus(accountStatus)}
-                </span>
-              </div>
-              <div>
-                <button 
-                  className="delete-button" 
-                  onClick={handleTradeStop}
-                  disabled={isAccountSuspended || suspendLoading || !hasAccount}
-                >
-                  {suspendLoading ? '처리중...' : 
-                   isAccountSuspended ? '거래정지됨' : 
-                   !hasAccount ? '계좌없음' : '거래정지'}
+                <button className="delete-button" onClick={handleTradeStop}>
+                  거래정지
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="section">
+          <h2 className="section-title">활동 내역</h2>
+          <div className="activity-list">
+            {userDetail.activities.map((activity, index) => (
+              <div key={index} className="activity-item">
+                <div className="activity-time">{activity.time}</div>
+                <div className="activity-description">{activity.description}</div>
+                <div className="activity-detail">{activity.detail}</div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -408,13 +325,11 @@ const UserDetail = ({ user, onBack }) => {
           <div className="modal-overlay">
             <div className="modal">
               <div className="modal-title">
-                {userDetail.username}님의 계좌에 대한 거래정지를 완료하였습니다.
+                {userDetail.name}님의 계좌에 대한 거래정지를 완료하였습니다.
               </div>
               <button 
                 className="modal-button"
-                onClick={() => {
-                  setShowModal(false);
-                }}
+                onClick={() => setShowModal(false)}
               >
                 확인
               </button>

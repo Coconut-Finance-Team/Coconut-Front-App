@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import CreateAccountModal from './account/createAccount/CreateAccountModal';
 import AccountSidebar from './account/AccountSidebar';
@@ -127,108 +126,21 @@ const MainLayout = styled.div`
   gap: 24px;
 `;
 
-const LoadingText = styled(MessageText)`
-  text-align: center;
-  margin-top: 0;
-`;
-
-const ErrorContainer = styled(NoAccountContainer)`
-  color: #e53e3e;
-`;
-
-const Account = ({ user, setUser }) => {
+function Account() {
+  const [hasAccount, setHasAccount] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [activePage, setActivePage] = useState('assets');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const fetchUserInfo = async () => {
-    const token = localStorage.getItem('jwtToken');
-    if (!token) {
-      setIsLoading(false);
-      navigate('/login');
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-      const response = await fetch('http://localhost:8080/api/v1/users/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('받아온 사용자 정보:', data);
-        setUser(data);
-        
-        if (data.primaryAccountId && location.pathname === '/account') {
-          navigate('/account/assets');
-        }
-      } else {
-        console.error('사용자 정보 가져오기 실패');
-        localStorage.removeItem('jwtToken');
-        setUser(null);
-        throw new Error('사용자 정보를 가져오는데 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('API 호출 에러:', error);
-      localStorage.removeItem('jwtToken');
-      setUser(null);
-      setError(error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchUserInfo();
-  }, []); // 컴포넌트 마운트 시 한 번만 실행
-
-  useEffect(() => {
-    const path = location.pathname.split('/').pop();
-    if (path && path !== 'account') {
-      setActivePage(path);
-    }
-  }, [location.pathname]);
 
   const handleCreateAccount = () => {
     setShowModal(true);
   };
 
-  const handleCloseModal = async () => {
+  const handleCloseModal = () => {
     setShowModal(false);
-    await fetchUserInfo();
+    setHasAccount(true);
   };
 
-  const handleMenuClick = (page) => {
-    setActivePage(page);
-    navigate(`/account/${page}`);
-  };
-
-  if (isLoading) {
-    return (
-      <NoAccountContainer>
-        <LoadingText>로딩 중...</LoadingText>
-      </NoAccountContainer>
-    );
-  }
-
-  if (error) {
-    return (
-      <ErrorContainer>
-        <MessageText>{error}</MessageText>
-        <CreateButton onClick={fetchUserInfo}>다시 시도</CreateButton>
-      </ErrorContainer>
-    );
-  }
-
-  if (!user?.primaryAccountId) {
+  if (!hasAccount) {
     return (
       <>
         <NoAccountContainer>
@@ -254,24 +166,35 @@ const Account = ({ user, setUser }) => {
     );
   }
 
+  const renderContent = () => {
+    switch (activePage) {
+      case 'assets':
+        return <AssetLog />;
+      case 'transactions':
+        return <TransactionLog />;
+      case 'orders':
+        return <OrderLog />;
+      case 'subscriptions':
+        return <SubscriptionHistory />;
+      case 'sales':
+        return <Sales />;
+      case 'management':
+        return <AccountManage />;
+      default:
+        return <AssetLog />;
+    }
+  };
+
   return (
     <PageContainer>
       <MainLayout>
         <AccountSidebar 
           activePage={activePage} 
-          onMenuClick={handleMenuClick}
+          onMenuClick={setActivePage}
         />
         
         <div style={{ flex: '0 1 960px', minWidth: 0 }}>
-          <Routes>
-            <Route path="/" element={<AssetLog />} />
-            <Route path="/assets" element={<AssetLog />} />
-            <Route path="/transactions" element={<TransactionLog />} />
-            <Route path="/orders" element={<OrderLog />} />
-            <Route path="/subscriptions" element={<SubscriptionHistory />} />
-            <Route path="/sales" element={<Sales />} />
-            <Route path="/management" element={<AccountManage />} />
-          </Routes>
+          {renderContent()}
         </div>
         
         <div style={{ width: '320px', position: 'sticky', top: '24px', height: 'fit-content' }}>
@@ -280,6 +203,6 @@ const Account = ({ user, setUser }) => {
       </MainLayout>
     </PageContainer>
   );
-};
+}
 
 export default Account;

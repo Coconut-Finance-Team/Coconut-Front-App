@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 
 const ModalOverlay = styled.div`
@@ -92,16 +92,9 @@ const Button = styled.button`
 
 function SubscriptionComplete() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { subscriptionData } = location.state || {}; // 이전 페이지에서 전달받은 데이터
-
-  const handleConfirm = () => {
-    // 청약 조회 페이지로 이동
-    navigate('/account/subscriptions');
-  };
 
   return (
-    <ModalOverlay onClick={() => navigate('/account/subscriptions')}>
+    <ModalOverlay onClick={() => navigate('/')}>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <ModalContent>
           <Title>청약신청이 완료되었습니다!</Title>
@@ -153,8 +146,8 @@ function SubscriptionComplete() {
           </InfoCard>
 
           <ButtonContainer>
-            <Button onClick={handleConfirm}>확인</Button>
-            <Button onClick={() => navigate('/account/subscriptions')}>신청청약 조회</Button>
+            <Button onClick={() => navigate('/')}>확인</Button>
+            <Button onClick={() => navigate('/subscription/inquiry')}>신청청약 조회</Button>
           </ButtonContainer>
         </ModalContent>
       </ModalContainer>

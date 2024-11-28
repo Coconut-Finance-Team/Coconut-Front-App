@@ -1,17 +1,10 @@
 import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { IdcardOutlined } from '@ant-design/icons';
 
 function SigninAddInfo() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const prevFormData = location.state;
-
   const [formData, setFormData] = useState({
     gender: '',
     job: '',
-    investmentStyle: ''
+    investment_style: '',
   });
 
   const handleChange = (e) => {
@@ -19,31 +12,10 @@ function SigninAddInfo() {
     setFormData({ ...formData, [name]: value });
   };
 
-   const handleCompleteSignup = async () => {
-     try {
-      const registerRequest = {
-        id: prevFormData.username,
-        username:prevFormData.name,
-        email: prevFormData.email,
-        password: prevFormData.password,
-        confirmPassword: prevFormData.confirmPassword,
-        gender: formData.gender,
-        job: formData.job,
-        investmentStyle: formData.investmentStyle,
-        phone: prevFormData.phoneNumber,
-        socialSecurityNumber: prevFormData.birthDate + prevFormData.ssn  // 주민번호 결합
-      };
-
-     const response = await axios.post('http://localhost:8080/api/v1/users/register', registerRequest);
-     
-     if (response.status === 200) {
-       navigate('/login');
-     }
-   } catch (error) {
-     console.error('회원가입 실패:', error);
-     alert(error.response?.data || '회원가입에 실패했습니다.');
-   }
- };
+  const handleCompleteSignup = () => {
+    // 네트워크 호출 없이 바로 홈페이지로 리다이렉트
+    window.location.href = '/';
+  };
 
   return (
     <div style={styles.signupContainer}>
@@ -69,7 +41,7 @@ function SigninAddInfo() {
         </div>
 
         <div style={styles.inputGroup}>
-          <select name="investmentStyle" value={formData.investmentStyle} onChange={handleChange} style={styles.inputField} required>
+          <select name="investment_style" value={formData.investment_style} onChange={handleChange} style={styles.inputField}>
             <option value="">투자 성향 선택</option>
             <option value="conservative">보수적</option>
             <option value="moderate">중간</option>

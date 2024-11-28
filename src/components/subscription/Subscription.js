@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import SubscriptionTable from './SubscriptionTable';
 import SubscriptionCalendar from './SubscriptionCalendar';
-import SubscriptionApply from './SubscriptionApply';
 
 const styles = {
   container: {
@@ -36,7 +35,7 @@ const styles = {
     fontWeight: '700',
     color: '#333D4B',
     fontFamily: '"Noto Sans KR", sans-serif',
-    transition: 'color 0.2s ease, transform 0.2s ease',
+    transition: 'color 0.2s ease, transform 0.2s ease', // 애니메이션 추가
   },
   inactiveTab: {
     flex: 1,
@@ -45,7 +44,7 @@ const styles = {
     color: '#8B95A1',
     cursor: 'pointer',
     fontSize: '16px',
-    transition: 'color 0.2s ease, transform 0.2s ease',
+    transition: 'color 0.2s ease, transform 0.2s ease', // 애니메이션 추가
     fontFamily: '"Noto Sans KR", sans-serif',
   },
 };
@@ -60,9 +59,8 @@ function Subscription() {
     navigate(tab === 'table' ? '/subscription/table' : '/subscription/calendar');
   };
 
-  // showTabs 변수가 중복 선언되어 있었으므로 하나만 남김
-  const showTabs = location.pathname === '/subscription/table' || 
-                   location.pathname === '/subscription/calendar';
+  // Show tabs only for SubscriptionTable and SubscriptionCalendar routes
+  const showTabs = location.pathname === '/subscription/table' || location.pathname === '/subscription/calendar';
 
   return (
     <div style={styles.container}>
@@ -76,11 +74,11 @@ function Subscription() {
             onClick={() => handleTabClick('table')}
             onMouseEnter={(e) => {
               e.target.style.color = '#333D4B';
-              e.target.style.transform = 'scale(1.05)';
+              e.target.style.transform = 'scale(1.05)'; // 확대 애니메이션
             }}
             onMouseLeave={(e) => {
               e.target.style.color = selectedTab === 'table' ? '#333D4B' : '#8B95A1';
-              e.target.style.transform = 'scale(1)';
+              e.target.style.transform = 'scale(1)'; // 원래 크기로
             }}
             style={selectedTab === 'table' ? { ...styles.inactiveTab, ...styles.activeTab } : styles.inactiveTab}
           >
@@ -90,11 +88,11 @@ function Subscription() {
             onClick={() => handleTabClick('calendar')}
             onMouseEnter={(e) => {
               e.target.style.color = '#333D4B';
-              e.target.style.transform = 'scale(1.05)';
+              e.target.style.transform = 'scale(1.05)'; // 확대 애니메이션
             }}
             onMouseLeave={(e) => {
               e.target.style.color = selectedTab === 'calendar' ? '#333D4B' : '#8B95A1';
-              e.target.style.transform = 'scale(1)';
+              e.target.style.transform = 'scale(1)'; // 원래 크기로
             }}
             style={selectedTab === 'calendar' ? { ...styles.inactiveTab, ...styles.activeTab } : styles.inactiveTab}
           >
@@ -106,7 +104,6 @@ function Subscription() {
       <Routes>
         <Route path="table" element={<SubscriptionTable />} />
         <Route path="calendar" element={<SubscriptionCalendar />} />
-        <Route path="apply" element={<SubscriptionApply />} />
       </Routes>
     </div>
   );

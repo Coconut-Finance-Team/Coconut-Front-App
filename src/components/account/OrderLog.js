@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import styled, { createGlobalStyle } from 'styled-components';
-import axios from 'axios';
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 const GlobalStyle = createGlobalStyle`
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
@@ -15,7 +12,6 @@ const Container = styled.div`
   padding: 25px 50px 0 5px;
   background: #ffffff;
 `;
-
 const Title = styled.h1`
   font-size: 26px;
   font-weight: 600;
@@ -54,11 +50,6 @@ const Tab = styled.button`
   }
 `;
 
-const DatePickerContainer = styled.div`
-  position: relative;
-  margin-bottom: 32px;
-`;
-
 const PeriodSelector = styled.button`
   display: flex;
   align-items: center;
@@ -70,39 +61,11 @@ const PeriodSelector = styled.button`
   color: #333;
   font-size: 14px;
   cursor: pointer;
+  margin-bottom: 32px;
   
   &::after {
     content: '▼';
     font-size: 10px;
-  }
-`;
-
-const DatePickerDropdown = styled.div`
-  position: absolute;
-  top: 100%;
-  left: 0;
-  background: white;
-  border: 1px solid #E5E8EB;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  padding: 8px;
-  z-index: 100;
-  margin-top: 4px;
-  width: 200px;
-`;
-
-const YearMonthButton = styled.button`
-  width: 100%;
-  padding: 8px 12px;
-  text-align: left;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #333;
-  font-size: 14px;
-  
-  &:hover {
-    background: #F8F9FA;
   }
 `;
 
@@ -151,12 +114,12 @@ const Modal = styled.div`
   left: 50%;
   transform: translate(-50%, -50%);
   background: white;
-  padding: 32px 24px 24px;  // 상단 패딩 조정
-  border-radius: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   width: 90%;
-  max-width: 420px;
+  max-width: 400px;
 `;
 
 const Overlay = styled.div`
@@ -172,9 +135,8 @@ const Overlay = styled.div`
 const DetailRow = styled.div`
   display: flex;
   justify-content: space-between;
-  margin-bottom: 16px;
-  font-size: 15px;
-  padding: 8px 0;
+  margin-bottom: 12px;
+  font-size: 14px;
   
   &:last-child {
     margin-bottom: 0;
@@ -183,32 +145,11 @@ const DetailRow = styled.div`
 
 const DetailLabel = styled.span`
   color: #666;
-  font-weight: 400;
 `;
 
 const DetailValue = styled.span`
   color: #333;
-  text-align: right;
-  font-weight: 400;
-`;
-
-const CloseButton = styled.button`
-  position: absolute;
-  top: 12px;          // 위치 조정
-  right: 12px;        // 위치 조정
-  background: none;
-  border: none;
-  font-size: 20px;    // 크기 조정
-  cursor: pointer;
-  color: #666;
-  width: 20px;        // 크기 조정
-  height: 20px;       // 크기 조정
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  line-height: 1;
-  z-index: 1001;
+  font-weight: 500;
 `;
 
 function OrderLog() {
@@ -216,64 +157,53 @@ function OrderLog() {
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderDetail, setOrderDetail] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [user, setUser] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    return new Date(today.getFullYear(), today.getMonth());
-  });
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
-
-// useEffect 수정
-useEffect(() => {
-  const fetchData = async () => {
+  const fetchOrders = async () => {
     try {
-      setLoading(true);
-      setError(null);
-
-      const token = localStorage.getItem('jwtToken');
-      
-      if (!token) {
-        setError('로그인이 필요합니다.');
-        setLoading(false);
-        return;
-      }
-
-      const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
-
-      const response = await axios.get(`${API_BASE_URL}/account/orders`, {
-        headers,
-        params: {
-          accountId: user?.primaryAccountId,
-          type: activeTab !== '전체' ? activeTab : undefined,
-          year: selectedDate.getFullYear(),
-          month: selectedDate.getMonth() + 1
-        }
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          uuid: 'ao3r2kngd-39d-dsjen-398djfkjf'
+        })
       });
 
-      // 선택된 월에 해당하는 주문만 필터링
-      const filteredOrders = (response.data || []).filter(order => {
-        const orderDate = new Date(order.orderTime);
-        return orderDate.getFullYear() === selectedDate.getFullYear() &&
-               orderDate.getMonth() === selectedDate.getMonth();
-      });
+      if (!response.ok) throw new Error('주문 내역 조회 실패');
 
-      setOrders(filteredOrders);
-
+      const data = await response.json();
+      setOrders(data.transaction_history || []);
     } catch (error) {
-      // ... error handling
-    } finally {
-      setLoading(false);
+      console.error('주문 내역 조회 중 오류 발생:', error);
     }
   };
 
-  fetchData();
-}, [activeTab, selectedDate, user]);
+  const fetchOrderDetail = async (orderId) => {
+    try {
+      const response = await fetch('/api/orders/detail', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          uuid: 'ao3r2kngd-39d-dsjen-398djfkjf',
+          order_id: orderId
+        })
+      });
+
+      if (!response.ok) throw new Error('주문 상세 조회 실패');
+
+      const data = await response.json();
+      setOrderDetail(data);
+    } catch (error) {
+      console.error('주문 상세 조회 중 오류 발생:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, [activeTab]); // activeTab이 변경될 때마다 데이터 다시 조회
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -290,21 +220,13 @@ useEffect(() => {
 
   const formatDateTime = (timestamp) => {
     if (!timestamp) return '-';
-    const date = new Date(timestamp);
-    return `${date.getFullYear()}. ${String(date.getMonth() + 1).padStart(2, '0')}. ${String(date.getDate()).padStart(2, '0')}. ${date.getHours() >= 12 ? '오후' : '오전'} ${String(date.getHours() % 12 || 12).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-  };
-
-  const generateYearMonths = () => {
-    const months = [];
-    const currentDate = new Date();
-    
-    // 현재 월부터 이전 11개월
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-      months.push(date);
-    }
-    
-    return months;
+    return new Date(timestamp).toLocaleString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   return (
@@ -312,103 +234,75 @@ useEffect(() => {
       <GlobalStyle />
       <Container>
         <Title>주문내역</Title>
-
-        {error && (
-          <div style={{ 
-            color: '#dc3545', 
-            padding: '16px', 
-            marginBottom: '16px', 
-            background: '#ffebee', 
-            borderRadius: '8px',
-            border: '1px solid #dc3545' 
-          }}>
-            {error}
-          </div>
-        )}
-               
-        <DatePickerContainer>
-  <PeriodSelector onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}>
-    확인할 주문 {selectedDate.getFullYear()}년 {selectedDate.getMonth() + 1}월
-  </PeriodSelector>
-  
-  {isDatePickerOpen && (
-    <DatePickerDropdown>
-      {generateYearMonths().map((date, index) => (
-        <YearMonthButton
-          key={index}
-          onClick={() => {
-            setSelectedDate(date);
-            setIsDatePickerOpen(false);
-          }}
-        >
-          {date.getFullYear()}년 {date.getMonth() + 1}월
-        </YearMonthButton>
-      ))}
-    </DatePickerDropdown>
-  )}
-</DatePickerContainer>
         
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-            로딩중...
-          </div>
-        ) : (
-          <OrderList>
-            {orders.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-                주문내역이 없습니다.
-              </div>
-            ) : (
-              orders.map((order, index) => (
-                <OrderCard key={index} onClick={() => {
-                  setSelectedOrder(order);
-                  setOrderDetail(order);
-                }}>
-                  <OrderInfo>
-                    <StockName>{order.stockName}</StockName>
-                    <OrderStatus color={getStatusColor(order.status)}>
-                      {order.status}
-                    </OrderStatus>
-                  </OrderInfo>
-                  <OrderDetail>
-                    <span>{formatDateTime(order.orderTime)}</span>
-                    <span>{formatNumber(order.quantity)}주</span>
-                  </OrderDetail>
-                </OrderCard>
-              ))
-            )}
-          </OrderList>
-        )}
+        <TabsContainer>
+          <TabList>
+            <Tab active={activeTab === '전체'} onClick={() => setActiveTab('전체')}>전체</Tab>
+            <Tab active={activeTab === '주간주문'} onClick={() => setActiveTab('주간주문')}>주간주문</Tab>
+            <Tab active={activeTab === '예약주문'} onClick={() => setActiveTab('예약주문')}>예약주문</Tab>
+          </TabList>
+        </TabsContainer>
+        
+        <PeriodSelector>
+          확인할 주문 2024년 1월
+        </PeriodSelector>
+        
+        <OrderList>
+          {orders.map((order, index) => (
+            <OrderCard key={index} onClick={() => {
+              setSelectedOrder(order);
+              fetchOrderDetail(order.id);
+            }}>
+              <OrderInfo>
+                <StockName>{order.date}</StockName>
+                <OrderStatus color={getStatusColor(order.status)}>{order.status}</OrderStatus>
+              </OrderInfo>
+              <OrderDetail>
+                <span>{order.name}</span>
+                <span>{order.quantity}주</span>
+              </OrderDetail>
+            </OrderCard>
+          ))}
+        </OrderList>
 
         {selectedOrder && orderDetail && (
           <>
             <Overlay onClick={() => setSelectedOrder(null)} />
             <Modal>
-              <CloseButton onClick={() => setSelectedOrder(null)}>×</CloseButton>
               <DetailRow>
                 <DetailLabel>종목명</DetailLabel>
-                <DetailValue>{orderDetail.stockName}</DetailValue>
+                <DetailValue>{orderDetail.stock_name}</DetailValue>
+              </DetailRow>
+              <DetailRow>
+                <DetailLabel>주문유형</DetailLabel>
+                <DetailValue>{orderDetail.type === 'purchase' ? '매수' : '매도'}</DetailValue>
               </DetailRow>
               <DetailRow>
                 <DetailLabel>주문상태</DetailLabel>
-                <DetailValue>{orderDetail.status}</DetailValue>
+                <DetailValue>{orderDetail.order_status}</DetailValue>
               </DetailRow>
               <DetailRow>
-                <DetailLabel>주문수량</DetailLabel>
-                <DetailValue>{formatNumber(orderDetail.quantity)}주</DetailValue>
+                <DetailLabel>주당 가격</DetailLabel>
+                <DetailValue>{formatNumber(orderDetail.price_per_one)}원</DetailValue>
               </DetailRow>
               <DetailRow>
-                <DetailLabel>주문가격</DetailLabel>
-                <DetailValue>{formatNumber(orderDetail.price)}원</DetailValue>
+                <DetailLabel>총 금액</DetailLabel>
+                <DetailValue>{formatNumber(orderDetail.total_price)}원</DetailValue>
               </DetailRow>
               <DetailRow>
                 <DetailLabel>주문 방식</DetailLabel>
-                <DetailValue>{orderDetail.type}</DetailValue>
+                <DetailValue>{orderDetail.order_type}</DetailValue>
               </DetailRow>
               <DetailRow>
                 <DetailLabel>주문 시간</DetailLabel>
-                <DetailValue>{formatDateTime(orderDetail.orderTime)}</DetailValue>
+                <DetailValue>{formatDateTime(orderDetail.order_time)}</DetailValue>
               </DetailRow>
+              {orderDetail.filled_time && (
+                <DetailRow>
+                  <DetailLabel>체결 시간</DetailLabel>
+                  <DetailValue>{formatDateTime(orderDetail.filled_time)}</DetailValue>
+                </DetailRow>
+              )}
             </Modal>
           </>
         )}

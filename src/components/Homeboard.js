@@ -34,23 +34,27 @@ const MarketCards = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
-  min-height: 0;
+  min-height: 0; /* 중요: 그리드 아이템이 부모 높이를 초과하지 않도록 함 */
 `;
 
 const ChartContainer = styled.div`
   width: 100%;
   height: 100%;
-  min-height: 0;
+  min-height: 0; /* 차트가 컨테이너 안에서 적절히 조절되도록 함 */
 `;
 
 const indices = [
   {
     name: "코스피",
-    isKospi: true,
+    value: 2571.86,
+    change: -5.02,
+    changePercent: -0.10,
   },
   {
     name: "코스닥",
-    isKospi: false,
+    value: 746.31,
+    change: -5.50,
+    changePercent: -0.70,
   },
 ];
 
@@ -63,10 +67,7 @@ function Homeboard() {
           <MarketCards>
             {indices.map((index, i) => (
               <ChartContainer key={i}>
-                <IndexChart 
-                  name={index.name} 
-                  isKospi={index.isKospi}
-                />
+                <IndexChart {...index} />
               </ChartContainer>
             ))}
           </MarketCards>

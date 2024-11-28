@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import ApiDetailMonitoring from './ApiDetailMonitoring';
+import React, { useState } from 'react';
+import ApiDetailMonitoring from './ApiDetailMonitoring';  // ApiDetailMonitoring 컴포넌트 import
 
 const styles = `
   .monitoring-container {
@@ -108,188 +108,141 @@ const styles = `
   .api-link:hover {
     text-decoration: underline;
   }
-
-  .loading {
-    text-align: center;
-    padding: 20px;
-    color: #64748b;
-  }
-
-  .error {
-    color: #dc2626;
-    padding: 20px;
-    text-align: center;
-    background-color: #fee2e2;
-    border-radius: 8px;
-    margin-bottom: 16px;
-  }
 `;
 
 const SystemMonitoring = () => {
-  const [selectedApi, setSelectedApi] = useState(null);
-  const [metrics, setMetrics] = useState(null);
-  const [alerts, setAlerts] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('http://localhost:8080/api/v1/admin/system');
-        if (!response.ok) {
-          throw new Error('데이터를 불러오는데 실패했습니다');
+    const [selectedApi, setSelectedApi] = useState(null);
+  
+    const apiMetrics = [
+      { 
+        endpoint: '/api/v1/trade', 
+        requests: '824/초', 
+        responseTime: '180ms', 
+        errorRate: '0.8%', 
+        status: '주의',
+        details: {
+          throughput: '2.4MB/s',
+          lastHourCalls: '2,964,000',
+          avgLatency: '175ms'
         }
-        const data = await response.json();
-        
-        // API 메트릭 데이터 변환
-        const formattedMetrics = data.apiMetrics.map(metric => ({
-          endpoint: metric.path,
-          requests: `${metric.requestsPerSecond}/초`,
-          responseTime: `${metric.avgResponseTime}ms`,
-          errorRate: `${(metric.errorRate * 100).toFixed(1)}%`,
-          status: metric.errorRate > 0.05 ? '주의' : '정상',
-          details: {
-            throughput: `${metric.throughput}MB/s`,
-            lastHourCalls: metric.lastHourCalls.toLocaleString(),
-            avgLatency: `${metric.avgLatency}ms`
-          }
-        }));
-
-        // 알림 데이터 변환
-        const formattedAlerts = data.alerts.map(alert => ({
-          time: new Date(alert.timestamp).toLocaleTimeString('ko-KR', {
-            hour: '2-digit',
-            minute: '2-digit'
-          }),
-          endpoint: alert.apiPath,
-          description: alert.description,
-          threshold: alert.threshold,
-          current: alert.currentValue,
-          status: alert.resolved ? '조치완료' : '모니터링중'
-        }));
-
-        setMetrics(formattedMetrics);
-        setAlerts(formattedAlerts);
-        setError(null);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+      },
+      { 
+        endpoint: '/api/v1/user', 
+        requests: '245/초', 
+        responseTime: '95ms', 
+        errorRate: '0.1%', 
+        status: '정상',
+        details: {
+          throughput: '1.2MB/s',
+          lastHourCalls: '882,000',
+          avgLatency: '92ms'
+        }
+      },
+    ];
+  
+    const alerts = [
+      { time: '15:42', endpoint: '/api/v1/trade', description: '트래픽 급증', threshold: '500/초', current: '824/초', status: '모니터링중' },
+      { time: '15:30', endpoint: '/api/v1/user', description: '응답시간 지연', threshold: '200ms', current: '312ms', status: '조치완료' },
+    ];
+  
+    const handleApiClick = (api) => {
+      setSelectedApi(api);
     };
-
-    fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 30000); // 30초마다 갱신
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleApiClick = (api) => {
-    setSelectedApi(api);
+  
+    if (selectedApi) {
+      return <ApiDetailMonitoring api={selectedApi} onBack={() => setSelectedApi(null)} />;
+    }
+  
+    return (
+      <>
+        <style>{styles}</style>
+        <div className="monitoring-container">
+          <h1 className="page-title">시스템 모니터링</h1>
+  
+          <div className="section">
+            <h2 className="section-title">API 모니터링</h2>
+            <table className="monitoring-table">
+              <thead>
+                <tr>
+                  <th>API 경로</th>
+                  <th>호출량</th>
+                  <th>응답시간</th>
+                  <th>에러율</th>
+                  <th>상태</th>
+                </tr>
+              </thead>
+              <tbody>
+                {apiMetrics.map((metric, index) => (
+                  <tr 
+                    key={index} 
+                    className="clickable-row"
+                    onClick={() => handleApiClick(metric)}
+                  >
+                    <td>
+                      <span className="api-link">
+                        {metric.endpoint}
+                      </span>
+                    </td>
+                    <td className="metric">{metric.requests}</td>
+                    <td className="metric">{metric.responseTime}</td>
+                    <td className="metric">{metric.errorRate}</td>
+                    <td>
+                      <span className={`status-badge ${
+                        metric.status === '주의' ? 'status-warning' : 'status-success'
+                      }`}>
+                        {metric.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+  
+          <div className="section">
+            <h2 className="section-title">트래픽 이상 알림</h2>
+            <table className="monitoring-table">
+              <thead>
+                <tr>
+                  <th>발생 시간</th>
+                  <th>API 경로</th>
+                  <th>이상 항목</th>
+                  <th>임계치</th>
+                  <th>측정값</th>
+                  <th>상태</th>
+                </tr>
+              </thead>
+              <tbody>
+                {alerts.map((alert, index) => (
+                  <tr key={index}>
+                    <td>{alert.time}</td>
+                    <td>
+                      <span 
+                        className="api-link"
+                        onClick={() => handleApiClick(apiMetrics.find(api => api.endpoint === alert.endpoint))}
+                      >
+                        {alert.endpoint}
+                      </span>
+                    </td>
+                    <td>{alert.description}</td>
+                    <td className="metric">{alert.threshold}</td>
+                    <td className="metric">{alert.current}</td>
+                    <td>
+                      <span className={`status-badge ${
+                        alert.status === '모니터링중' ? 'status-warning' : 'status-success'
+                      }`}>
+                        {alert.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </>
+    );
   };
-
-  if (selectedApi) {
-    return <ApiDetailMonitoring api={selectedApi} onBack={() => setSelectedApi(null)} />;
-  }
-
-  return (
-    <>
-      <style>{styles}</style>
-      <div className="monitoring-container">
-        <h1 className="page-title">시스템 모니터링</h1>
-
-        {error && <div className="error">{error}</div>}
-
-        {loading && !metrics ? (
-          <div className="loading">데이터를 불러오는 중...</div>
-        ) : (
-          <>
-            <div className="section">
-              <h2 className="section-title">API 모니터링</h2>
-              <table className="monitoring-table">
-                <thead>
-                  <tr>
-                    <th>API 경로</th>
-                    <th>호출량</th>
-                    <th>응답시간</th>
-                    <th>에러율</th>
-                    <th>상태</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {metrics?.map((metric, index) => (
-                    <tr 
-                      key={index} 
-                      className="clickable-row"
-                      onClick={() => handleApiClick(metric)}
-                    >
-                      <td>
-                        <span className="api-link">
-                          {metric.endpoint}
-                        </span>
-                      </td>
-                      <td className="metric">{metric.requests}</td>
-                      <td className="metric">{metric.responseTime}</td>
-                      <td className="metric">{metric.errorRate}</td>
-                      <td>
-                        <span className={`status-badge ${
-                          metric.status === '주의' ? 'status-warning' : 'status-success'
-                        }`}>
-                          {metric.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="section">
-              <h2 className="section-title">트래픽 이상 알림</h2>
-              <table className="monitoring-table">
-                <thead>
-                  <tr>
-                    <th>발생 시간</th>
-                    <th>API 경로</th>
-                    <th>이상 항목</th>
-                    <th>임계치</th>
-                    <th>측정값</th>
-                    <th>상태</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {alerts?.map((alert, index) => (
-                    <tr key={index}>
-                      <td>{alert.time}</td>
-                      <td>
-                        <span 
-                          className="api-link"
-                          onClick={() => handleApiClick(metrics?.find(api => api.endpoint === alert.endpoint))}
-                        >
-                          {alert.endpoint}
-                        </span>
-                      </td>
-                      <td>{alert.description}</td>
-                      <td className="metric">{alert.threshold}</td>
-                      <td className="metric">{alert.current}</td>
-                      <td>
-                        <span className={`status-badge ${
-                          alert.status === '모니터링중' ? 'status-warning' : 'status-success'
-                        }`}>
-                          {alert.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </div>
-    </>
-  );
-};
-
-export default SystemMonitoring;
+  
+  export default SystemMonitoring;
+  
