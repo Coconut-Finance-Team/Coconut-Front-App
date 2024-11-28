@@ -105,10 +105,8 @@ pipeline {
                            git config --global user.email "jenkins@example.com"
                            git config --global user.name "Jenkins"
                            git fetch origin
-                           git stash
-                           git checkout main
-                           git stash pop
-                           git pull origin main
+                           git reset --hard origin/main
+                           git clean -fd
                            
                            mkdir -p k8s
                            cat << EOF > k8s/deployment.yaml
@@ -148,7 +146,7 @@ EOF
                            export KUBECONFIG=${KUBE_CONFIG}
                            argocd login afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com \
                                --username coconut \
-                               --token ${ARGOCD_CREDENTIALS} \
+                               --password ${ARGOCD_CREDENTIALS} \
                                --insecure \
                                --plaintext
                            argocd app sync frontend-app
