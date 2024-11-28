@@ -14,4 +14,4 @@ spec:
    spec:
      containers:
      - name: frontend
-       image: 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/castlehoo/frontend:27
+       image: 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/castlehoo/frontend:29
