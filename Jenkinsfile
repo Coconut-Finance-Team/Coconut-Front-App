@@ -108,7 +108,9 @@ stage('Update Kubernetes Manifests') {
             script {
                 sh """
                     git fetch origin
+                    git stash
                     git checkout main
+                    git stash pop
                     git pull origin main
                     git reset --hard origin/main
                     
