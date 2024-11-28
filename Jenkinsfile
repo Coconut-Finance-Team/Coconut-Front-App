@@ -108,7 +108,10 @@ stage('Update Kubernetes Manifests') {
             script {
                 sh """
                     git fetch origin
+                    git checkout main
+                    git pull origin main
                     git reset --hard origin/main
+                    
                     mkdir -p k8s
                     cat << EOF > k8s/deployment.yaml
 apiVersion: apps/v1
