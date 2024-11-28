@@ -2,7 +2,7 @@
 FROM node:16 as builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps  # 이 부분을 수정
 COPY . .
 RUN npm run build
 
