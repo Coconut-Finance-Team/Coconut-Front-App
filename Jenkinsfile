@@ -1,10 +1,6 @@
 pipeline {
     agent any
     
-    triggers {
-        githubPush()
-    }
-    
     options {
         timeout(time: 1, unit: 'HOURS')
         disableConcurrentBuilds()
@@ -17,44 +13,13 @@ pipeline {
         KUBE_CONFIG = credentials('eks-kubeconfig')
         GIT_CREDENTIALS = credentials('github-token')
         AWS_CREDENTIALS = credentials('aws-credentials')
-        CHANGES_DETECTED = 'false'
     }
     
     stages {
-        stage('Check for Changes') {
-            steps {
-                script {
-                    echo "변경사항 감지 검사 시작..."
-                    
-                    def changes = sh(
-                        script: '''
-                            git fetch origin
-                            git diff HEAD@{1} --name-only | grep -v "k8s/deployment.yaml" || true
-                        ''',
-                        returnStdout: true
-                    ).trim()
-                    
-                    echo "감지된 변경사항:\n${changes}"
-                    
-                    if (changes.isEmpty()) {
-                        echo "코드 변경사항이 없거나 deployment.yaml만 변경됨. 빌드를 중단합니다."
-                        currentBuild.result = 'ABORTED'
-                        error('No relevant changes detected')
-                    } else {
-                        echo "코드 변경사항이 감지되어 빌드를 진행합니다."
-                        env.setProperty('CHANGES_DETECTED', 'true')
-                    }
-                }
-            }
-        }
-
         stage('Check Commit Message') {
-            when {
-                expression { return env.CHANGES_DETECTED == 'true' }
-            }
             steps {
-                script {
-                    try {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    script {
                         echo "단계: 커밋 메시지 확인 시작"
                         def commitMessage = sh(
                             script: 'git log -1 --pretty=%B',
@@ -67,36 +32,26 @@ pipeline {
                             error("배포 업데이트 커밋으로 인한 빌드 스킵")
                         }
                         echo "커밋 메시지 확인 완료"
-                    } catch (Exception e) {
-                        error("커밋 메시지 확인 중 오류 발생: ${e.message}")
                     }
                 }
             }
         }
 
         stage('Checkout') {
-            when {
-                expression { return env.CHANGES_DETECTED == 'true' }
-            }
             steps {
-                script {
-                    try {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    script {
                         echo "단계: 소스 코드 체크아웃 시작"
                         retry(3) {
                             checkout scm
                         }
                         echo "소스 코드 체크아웃 완료"
-                    } catch (Exception e) {
-                        error("소스 코드 체크아웃 중 오류 발생: ${e.message}")
                     }
                 }
             }
         }
 
         stage('Setup Node.js') {
-            when {
-                expression { return env.CHANGES_DETECTED == 'true' }
-            }
             steps {
                 script {
                     try {
@@ -120,12 +75,9 @@ pipeline {
         }
 
         stage('Build React Application') {
-            when {
-                expression { return env.CHANGES_DETECTED == 'true' }
-            }
             steps {
-                script {
-                    try {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    script {
                         echo "단계: React 애플리케이션 빌드 시작"
                         timeout(time: 10, unit: 'MINUTES') {
                             sh '''
@@ -148,43 +100,37 @@ pipeline {
                             '''
                         }
                         echo "React 애플리케이션 빌드 완료"
-                    } catch (Exception e) {
-                        error("React 애플리케이션 빌드 중 오류 발생: ${e.message}")
                     }
                 }
             }
         }
 
         stage('Build Docker Image') {
-            when {
-                expression { return env.CHANGES_DETECTED == 'true' }
-            }
             steps {
-                script {
-                    try {
-                        echo "단계: Docker 이미지 빌드 시작"
-                        sh """
-                            echo "Docker 빌드 컨텍스트 확인..."
-                            ls -la
-                            
-                            echo "Docker 이미지 빌드 중... (태그: ${DOCKER_TAG})"
-                            docker build -t ${ECR_REPOSITORY}:${DOCKER_TAG} .
-                            
-                            echo "빌드된 Docker 이미지 확인"
-                            docker images | grep ${ECR_REPOSITORY}
-                        """
-                        echo "Docker 이미지 빌드 완료"
-                    } catch (Exception e) {
-                        error("Docker 이미지 빌드 중 오류 발생: ${e.message}")
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    script {
+                        try {
+                            echo "단계: Docker 이미지 빌드 시작"
+                            sh """
+                                echo "Docker 빌드 컨텍스트 확인..."
+                                ls -la
+                                
+                                echo "Docker 이미지 빌드 중... (태그: ${DOCKER_TAG})"
+                                docker build -t ${ECR_REPOSITORY}:${DOCKER_TAG} .
+                                
+                                echo "빌드된 Docker 이미지 확인"
+                                docker images | grep ${ECR_REPOSITORY}
+                            """
+                            echo "Docker 이미지 빌드 완료"
+                        } catch (Exception e) {
+                            error("Docker 이미지 빌드 중 오류 발생: ${e.message}")
+                        }
                     }
                 }
             }
         }
 
         stage('Push to AWS ECR') {
-            when {
-                expression { return env.CHANGES_DETECTED == 'true' }
-            }
             steps {
                 script {
                     try {
@@ -229,9 +175,6 @@ pipeline {
         }
 
         stage('Update Kubernetes Manifests') {
-            when {
-                expression { return env.CHANGES_DETECTED == 'true' }
-            }
             steps {
                 script {
                     try {
@@ -296,9 +239,6 @@ EOF
         }
 
         stage('Sync ArgoCD Application') {
-            when {
-                expression { return env.CHANGES_DETECTED == 'true' }
-            }
             steps {
                 script {
                     try {
@@ -361,13 +301,11 @@ EOF
         failure {
             script {
                 echo '파이프라인 실패! 로그를 확인하세요.'
-                // 여기에 실패 시 알림 로직을 추가할 수 있습니다
             }
         }
         success {
             script {
                 echo '파이프라인이 성공적으로 완료되었습니다!'
-                // 여기에 성공 시 알림 로직을 추가할 수 있습니다
             }
         }
     }
