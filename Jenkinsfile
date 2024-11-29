@@ -130,49 +130,49 @@ pipeline {
             }
         }
 
-stage('Push to AWS ECR') {
-    steps {
-        script {
-            try {
-                withCredentials([[
-                    credentialsId: 'aws-credentials',
-                    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY',
-                    $class: 'AmazonWebServicesCredentialsBinding'
-                ]]) {
-                    echo "단계: ECR 푸시 시작"
-                    
-                    // Docker 이미지 존재 여부 확인
-                    def imageExists = sh(
-                        script: "docker images ${ECR_REPOSITORY}:${DOCKER_TAG} --format '{{.Repository}}'",
-                        returnStdout: true
-                    ).trim()
-                    
-                    if (!imageExists) {
-                        error("Docker 이미지 ${ECR_REPOSITORY}:${DOCKER_TAG}를 찾을 수 없습니다")
+        stage('Push to AWS ECR') {
+            steps {
+                script {
+                    try {
+                        withCredentials([[
+                            credentialsId: 'aws-credentials',
+                            accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                            secretKeyVariable: 'AWS_SECRET_ACCESS_KEY',
+                            $class: 'AmazonWebServicesCredentialsBinding'
+                        ]]) {
+                            echo "단계: ECR 푸시 시작"
+                            
+                            // Docker 이미지 존재 여부 확인
+                            def imageExists = sh(
+                                script: "docker images ${ECR_REPOSITORY}:${DOCKER_TAG} --format '{{.Repository}}'",
+                                returnStdout: true
+                            ).trim()
+                            
+                            if (!imageExists) {
+                                error("Docker 이미지 ${ECR_REPOSITORY}:${DOCKER_TAG}를 찾을 수 없습니다")
+                            }
+                            
+                            sh """
+                                echo "ECR 로그인 중..."
+                                aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com
+                                
+                                echo "이미지 태깅 중..."
+                                docker tag ${ECR_REPOSITORY}:${DOCKER_TAG} 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
+                                
+                                echo "ECR로 이미지 푸시 중..."
+                                docker push 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
+                                
+                                echo "푸시된 이미지 확인"
+                                aws ecr describe-images --repository-name ${ECR_REPOSITORY} --image-ids imageTag=${DOCKER_TAG} --region ap-northeast-2
+                            """
+                            echo "ECR 푸시 완료"
+                        }
+                    } catch (Exception e) {
+                        error("ECR 푸시 중 오류 발생: ${e.message}")
                     }
-                    
-                    sh """
-                        echo "ECR 로그인 중..."
-                        aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com
-                        
-                        echo "이미지 태깅 중..."
-                        docker tag ${ECR_REPOSITORY}:${DOCKER_TAG} 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
-                        
-                        echo "ECR로 이미지 푸시 중..."
-                        docker push 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
-                        
-                        echo "푸시된 이미지 확인"
-                        aws ecr describe-images --repository-name ${ECR_REPOSITORY} --image-ids imageTag=${DOCKER_TAG} --region ap-northeast-2
-                    """
-                    echo "ECR 푸시 완료"
                 }
-            } catch (Exception e) {
-                error("ECR 푸시 중 오류 발생: ${e.message}")
             }
         }
-    }
-}
 
         stage('Update Kubernetes Manifests') {
             steps {
@@ -238,58 +238,58 @@ EOF
             }
         }
 
-       stage('Sync ArgoCD Application') {
-    steps {
-        script {
-            try {
-                echo "단계: ArgoCD 동기화 시작"
-                
-                // kubectl과 argocd 설치 확인
-                sh '''
-                    which kubectl || { echo "kubectl not found"; exit 1; }
-                    which argocd || { echo "argocd not found"; exit 1; }
-                '''
-                
-                sh """
-                    set -x
-                    
-                    echo "KUBECONFIG 설정..."
-                    export KUBECONFIG=${KUBE_CONFIG}
-                    
-                    echo "현재 Kubernetes 컨텍스트 확인..."
-                    kubectl config current-context
-                    
-                    echo "ArgoCD 서버 상태 확인..."
-                    ARGOCD_SERVER="afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com"
-                    curl -k https://\${ARGOCD_SERVER}/api/version
-                    
-                    echo "ArgoCD 로그인 시도..."
-                    argocd login \${ARGOCD_SERVER} \
-                        --core \
-                        --auth-token ${ARGOCD_CREDENTIALS} \
-                        --grpc-web \
-                        --insecure \
-                        --plaintext
-                    
-                    echo "ArgoCD 컨텍스트 확인..."
-                    argocd context
-                    
-                    echo "애플리케이션 동기화 중..."
-                    argocd app sync frontend-app
-                    
-                    echo "애플리케이션 상태 대기 중..."
-                    argocd app wait frontend-app --sync --health --timeout 300
-                    
-                    echo "최종 애플리케이션 상태 확인..."
-                    argocd app get frontend-app
-                """
-                echo "ArgoCD 동기화 완료"
-            } catch (Exception e) {
-                error("ArgoCD 동기화 중 오류 발생: ${e.message}")
+        stage('Sync ArgoCD Application') {
+            steps {
+                script {
+                    try {
+                        echo "단계: ArgoCD 동기화 시작"
+                        
+                        // kubectl과 argocd 설치 확인
+                        sh '''
+                            which kubectl || { echo "kubectl not found"; exit 1; }
+                            which argocd || { echo "argocd not found"; exit 1; }
+                        '''
+                        
+                        sh """
+                            set -x
+                            
+                            echo "KUBECONFIG 설정..."
+                            export KUBECONFIG=${KUBE_CONFIG}
+                            
+                            echo "현재 Kubernetes 컨텍스트 확인..."
+                            kubectl config current-context
+                            
+                            echo "ArgoCD 서버 상태 확인..."
+                            ARGOCD_SERVER="afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com"
+                            curl -k https://\${ARGOCD_SERVER}/api/version
+                            
+                            echo "ArgoCD 로그인 시도..."
+                            argocd login \${ARGOCD_SERVER} \
+                                --core \
+                                --auth-token ${ARGOCD_CREDENTIALS} \
+                                --grpc-web \
+                                --insecure \
+                                --plaintext
+                            
+                            echo "ArgoCD 컨텍스트 확인..."
+                            argocd context
+                            
+                            echo "애플리케이션 동기화 중..."
+                            argocd app sync frontend-app
+                            
+                            echo "애플리케이션 상태 대기 중..."
+                            argocd app wait frontend-app --sync --health --timeout 300
+                            
+                            echo "최종 애플리케이션 상태 확인..."
+                            argocd app get frontend-app
+                        """
+                        echo "ArgoCD 동기화 완료"
+                    } catch (Exception e) {
+                        error("ArgoCD 동기화 중 오류 발생: ${e.message}")
+                    }
+                }
             }
         }
-    }
-}
     }
 
     post {
