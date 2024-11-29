@@ -16,6 +16,41 @@ pipeline {
     }
     
     stages {
+        stage('Cleanup Workspace') {
+            steps {
+                script {
+                    try {
+                        echo "시스템 클린업 시작..."
+                        
+                        // 미사용 Docker 리소스 정리
+                        sh '''
+                            echo "Docker 시스템 정리 중..."
+                            docker system prune -af || true
+                            docker volume prune -f || true
+                            docker network prune -f || true
+                            
+                            echo "이전 빌드 정리 중..."
+                            rm -rf node_modules || true
+                            rm -rf build || true
+                            rm -rf dist || true
+                            rm -f package-lock.json || true
+                            
+                            echo "npm 캐시 정리 중..."
+                            npm cache clean --force || true
+                            
+                            echo "현재 디스크 사용량:"
+                            df -h
+                            echo "Docker 디스크 사용량:"
+                            docker system df
+                        '''
+                    } catch (Exception e) {
+                        echo "클린업 중 오류 발생: ${e.message}"
+                        // 클린업 실패해도 빌드는 계속 진행
+                    }
+                }
+            }
+        }
+
         stage('Check Commit Message') {
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
@@ -81,13 +116,6 @@ pipeline {
                         echo "단계: React 애플리케이션 빌드 시작"
                         timeout(time: 10, unit: 'MINUTES') {
                             sh '''
-                                echo "기존 패키지 파일 제거 중..."
-                                rm -f package-lock.json
-                                rm -rf node_modules
-                                
-                                echo "npm 캐시 정리 중..."
-                                npm cache clean --force
-                                
                                 echo "의존성 설치 중..."
                                 npm install ajv --save-dev --legacy-peer-deps
                                 npm install --legacy-peer-deps --no-audit
@@ -297,8 +325,19 @@ EOF
             script {
                 echo "파이프라인 정리 작업 시작"
                 try {
-                    sh 'docker logout'
-                    sh 'rm -f ${KUBE_CONFIG}'
+                    sh '''
+                        echo "Docker 로그아웃..."
+                        docker logout
+                        
+                        echo "임시 파일 정리..."
+                        rm -f ${KUBE_CONFIG}
+                        
+                        echo "작업 디렉토리 정리..."
+                        rm -rf node_modules build dist
+                        
+                        echo "Docker 이미지 정리..."
+                        docker system prune -af || true
+                    '''
                 } catch (Exception e) {
                     echo "정리 작업 중 오류 발생: ${e.message}"
                 }
