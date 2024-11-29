@@ -238,51 +238,58 @@ EOF
             }
         }
 
-        stage('Sync ArgoCD Application') {
-            steps {
-                script {
-                    try {
-                        echo "단계: ArgoCD 동기화 시작"
-                        sh """
-                            set -x
-                            
-                            echo "KUBECONFIG 설정..."
-                            export KUBECONFIG=${KUBE_CONFIG}
-                            
-                            echo "현재 Kubernetes 컨텍스트 확인..."
-                            kubectl config current-context
-                            
-                            echo "ArgoCD 서버 상태 확인..."
-                            ARGOCD_SERVER="afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com"
-                            curl -k https://\${ARGOCD_SERVER}/api/version
-                            
-                            echo "ArgoCD 로그인 시도..."
-                            argocd login \${ARGOCD_SERVER} \
-                                --core \
-                                --auth-token ${ARGOCD_CREDENTIALS} \
-                                --grpc-web \
-                                --insecure \
-                                --plaintext
-                            
-                            echo "ArgoCD 컨텍스트 확인..."
-                            argocd context
-                            
-                            echo "애플리케이션 동기화 중..."
-                            argocd app sync frontend-app
-                            
-                            echo "애플리케이션 상태 대기 중..."
-                            argocd app wait frontend-app --sync --health --timeout 300
-                            
-                            echo "최종 애플리케이션 상태 확인..."
-                            argocd app get frontend-app
-                        """
-                        echo "ArgoCD 동기화 완료"
-                    } catch (Exception e) {
-                        error("ArgoCD 동기화 중 오류 발생: ${e.message}")
-                    }
-                }
+       stage('Sync ArgoCD Application') {
+    steps {
+        script {
+            try {
+                echo "단계: ArgoCD 동기화 시작"
+                
+                // kubectl과 argocd 설치 확인
+                sh '''
+                    which kubectl || { echo "kubectl not found"; exit 1; }
+                    which argocd || { echo "argocd not found"; exit 1; }
+                '''
+                
+                sh """
+                    set -x
+                    
+                    echo "KUBECONFIG 설정..."
+                    export KUBECONFIG=${KUBE_CONFIG}
+                    
+                    echo "현재 Kubernetes 컨텍스트 확인..."
+                    kubectl config current-context
+                    
+                    echo "ArgoCD 서버 상태 확인..."
+                    ARGOCD_SERVER="afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com"
+                    curl -k https://\${ARGOCD_SERVER}/api/version
+                    
+                    echo "ArgoCD 로그인 시도..."
+                    argocd login \${ARGOCD_SERVER} \
+                        --core \
+                        --auth-token ${ARGOCD_CREDENTIALS} \
+                        --grpc-web \
+                        --insecure \
+                        --plaintext
+                    
+                    echo "ArgoCD 컨텍스트 확인..."
+                    argocd context
+                    
+                    echo "애플리케이션 동기화 중..."
+                    argocd app sync frontend-app
+                    
+                    echo "애플리케이션 상태 대기 중..."
+                    argocd app wait frontend-app --sync --health --timeout 300
+                    
+                    echo "최종 애플리케이션 상태 확인..."
+                    argocd app get frontend-app
+                """
+                echo "ArgoCD 동기화 완료"
+            } catch (Exception e) {
+                error("ArgoCD 동기화 중 오류 발생: ${e.message}")
             }
         }
+    }
+}
     }
 
     post {
