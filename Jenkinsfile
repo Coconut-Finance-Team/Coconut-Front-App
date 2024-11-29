@@ -266,7 +266,7 @@ EOF
             }
         }
 
-        stage('Sync ArgoCD Application') {
+       stage('Sync ArgoCD Application') {
             steps {
                 script {
                     try {
@@ -293,20 +293,15 @@ EOF
                             
                             echo "ArgoCD 로그인 시도..."
                             argocd login \${ARGOCD_SERVER} \
-                                --core \
-                                --auth-token ${ARGOCD_CREDENTIALS} \
-                                --grpc-web \
-                                --insecure \
-                                --plaintext
-                            
-                            echo "ArgoCD 컨텍스트 확인..."
-                            argocd context
+                                --username coconut \
+                                --password coconutkr \
+                                --insecure
                             
                             echo "애플리케이션 동기화 중..."
                             argocd app sync frontend-app
                             
                             echo "애플리케이션 상태 대기 중..."
-                            argocd app wait frontend-app --sync --health --timeout 300
+                            argocd app wait frontend-app --health --timeout 300
                             
                             echo "최종 애플리케이션 상태 확인..."
                             argocd app get frontend-app
