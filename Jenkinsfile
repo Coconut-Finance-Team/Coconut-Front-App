@@ -210,7 +210,8 @@ stage('Update Kubernetes Manifests') {
                 sh """
                     set -x
                     echo "Git 저장소 업데이트..."
-                    git fetch origin
+                    git fetch --all
+                    git checkout -B main origin/main
                     git reset --hard origin/main
                     
                     echo "deployment.yaml 수정..."
