@@ -18,6 +18,8 @@ spec:
         operator: "Equal"
         value: "frontend"
         effect: "NoSchedule"
+      imagePullSecrets:
+      - name: ecr-credentials
       containers:
       - name: frontend
         image: 528757801774.dkr.ecr.ap-northeast-2.amazonaws.com/src/frontend:latest
