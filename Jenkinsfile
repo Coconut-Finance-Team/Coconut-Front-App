@@ -182,13 +182,13 @@ pipeline {
                             
                             sh """
                                 echo "ECR 로그인 중..."
-                                aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com
+                                aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 528757801774.dkr.ecr.ap-northeast-2.amazonaws.com
                                 
                                 echo "이미지 태깅 중..."
-                                docker tag ${ECR_REPOSITORY}:${DOCKER_TAG} 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
+                                docker tag ${ECR_REPOSITORY}:${DOCKER_TAG} 528757801774.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
                                 
                                 echo "ECR로 이미지 푸시 중..."
-                                docker push 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
+                                docker push 528757801774.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
                                 
                                 echo "푸시된 이미지 확인"
                                 aws ecr describe-images --repository-name ${ECR_REPOSITORY} --image-ids imageTag=${DOCKER_TAG} --region ap-northeast-2
@@ -202,69 +202,37 @@ pipeline {
             }
         }
 
-        stage('Update Kubernetes Manifests') {
-            steps {
-                script {
-                    try {
-                        echo "단계: Kubernetes 매니페스트 업데이트 시작"
-                        sh """
-                            set -x
-                            
-                            echo "Git 사용자 설정..."
-                            git config --global user.email "jenkins@example.com"
-                            git config --global user.name "Jenkins"
-                            
-                            echo "Git 저장소 업데이트..."
-                            git fetch origin
-                            git reset --hard HEAD
-                            git clean -fd
-                            
-                            echo "메인 브랜치 체크아웃..."
-                            git checkout main
-                            git reset --hard origin/main
-                            
-                            echo "deployment.yaml 생성..."
-                            mkdir -p k8s
-                            cat << EOF > k8s/deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: frontend-deployment
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: frontend
-  template:
-    metadata:
-      labels:
-        app: frontend
-    spec:
-      containers:
-      - name: frontend
-        image: 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}
-EOF
-                            
-                            echo "Git remote 설정..."
-                            git remote set-url origin https://${GIT_CREDENTIALS_USR}:${GIT_CREDENTIALS_PSW}@github.com/Coconut-Finance-Team/Coconut-Front-App.git
-                            
-                            echo "변경사항 커밋..."
-                            git add k8s/deployment.yaml
-                            git commit -m "Update frontend deployment to version ${DOCKER_TAG}"
-                            
-                            echo "GitHub로 푸시..."
-                            git push origin main
-                            
-                            echo "Git 상태 확인"
-                            git status
-                        """
-                        echo "Kubernetes 매니페스트 업데이트 완료"
-                    } catch (Exception e) {
-                        error("Kubernetes 매니페스트 업데이트 중 오류 발생: ${e.message}")
-                    }
-                }
+stage('Update Kubernetes Manifests') {
+    steps {
+        script {
+            try {
+                echo "단계: Kubernetes 매니페스트 업데이트 시작"
+                sh """
+                    set -x
+                    echo "Git 저장소 업데이트..."
+                    git fetch origin
+                    git reset --hard origin/main
+                    
+                    echo "deployment.yaml 수정..."
+                    sed -i 's|image:.*|image: 528757801774.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}|' k8s/deployment.yaml
+                    
+                    echo "Git 변경 사항 확인..."
+                    git diff
+                    
+                    echo "변경 사항 커밋..."
+                    git add k8s/deployment.yaml
+                    git commit -m "Update frontend deployment to version ${DOCKER_TAG}" || echo "변경 사항 없음, 스킵"
+                    
+                    echo "GitHub로 푸시..."
+                    git push origin main || echo "푸시할 변경 사항 없음"
+                """
+                echo "Kubernetes 매니페스트 업데이트 완료"
+            } catch (Exception e) {
+                error("Kubernetes 매니페스트 업데이트 중 오류 발생: ${e.message}")
             }
         }
+    }
+}
 
        stage('Sync ArgoCD Application') {
             steps {
@@ -288,13 +256,13 @@ EOF
                             kubectl config current-context
                             
                             echo "ArgoCD 서버 상태 확인..."
-                            ARGOCD_SERVER="afd51e96d120b4dce86e1aa21fe3316d-787997945.ap-northeast-2.elb.amazonaws.com"
+                            ARGOCD_SERVER="ae0c624d8c8c34f46b9506de93d0e803-317719040.ap-northeast-2.elb.amazonaws.com"
                             curl -k https://\${ARGOCD_SERVER}/api/version
                             
                             echo "ArgoCD 로그인 시도..."
                             argocd login \${ARGOCD_SERVER} \
                                 --username coconut \
-                                --password coconutkr \
+                                --password twinho3230 \
                                 --insecure
                             
                             echo "애플리케이션 동기화 중..."
