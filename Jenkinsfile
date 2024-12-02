@@ -248,25 +248,15 @@ stage('Sync ArgoCD Application') {
             try {
                 echo "단계: ArgoCD 동기화 시작"
                 
-                // kubectl과 argocd CLI 설치
-                sh '''
-                    echo "kubectl 설치 중..."
-                    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-                    chmod +x kubectl
-                    sudo mv kubectl /usr/local/bin/
+                // PATH 환경변수 설정
+                sh """
+                    export PATH=\$PATH:/var/lib/jenkins/bin:/usr/local/bin
                     
-                    echo "ArgoCD CLI 설치 중..."
-                    curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
-                    chmod +x argocd
-                    sudo mv argocd /usr/local/bin/
-                    
-                    echo "설치된 버전 확인..."
+                    echo "설치된 도구 확인..."
+                    which kubectl
+                    which argocd
                     kubectl version --client
                     argocd version --client
-                '''
-                
-                sh """
-                    set -x
                     
                     echo "ArgoCD 서버 상태 확인..."
                     ARGOCD_SERVER="aebaac6a687b24f28ad8311739898b12-2096717322.ap-northeast-2.elb.amazonaws.com"
