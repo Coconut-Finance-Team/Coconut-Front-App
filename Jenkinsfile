@@ -242,47 +242,58 @@ pipeline {
             }
         }
 
-        stage('Sync ArgoCD Application') {
-            steps {
-                script {
-                    try {
-                        echo "단계: ArgoCD 동기화 시작"
-                        
-                        // kubectl과 argocd 설치 확인
-                        sh '''
-                            which kubectl || { echo "kubectl not found"; exit 1; }
-                            which argocd || { echo "argocd not found"; exit 1; }
-                        '''
-                        
-                        sh """
-                            set -x
-                            
-                            echo "ArgoCD 서버 상태 확인..."
-                            ARGOCD_SERVER="aebaac6a687b24f28ad8311739898b12-2096717322.ap-northeast-2.elb.amazonaws.com"
-                            
-                            echo "ArgoCD 로그인..."
-                            argocd login \${ARGOCD_SERVER} \
-                                --username coconut \
-                                --password twinho3230 \
-                                --insecure \
-                                --grpc-web
-                            
-                            echo "애플리케이션 동기화 중..."
-                            argocd app sync frontend-app --grpc-web
-                            
-                            echo "애플리케이션 상태 대기 중..."
-                            argocd app wait frontend-app --health --timeout 300 --grpc-web
-                            
-                            echo "최종 애플리케이션 상태 확인..."
-                            argocd app get frontend-app --grpc-web
-                        """
-                        echo "ArgoCD 동기화 완료"
-                    } catch (Exception e) {
-                        error("ArgoCD 동기화 중 오류 발생: ${e.message}")
-                    }
-                }
+stage('Sync ArgoCD Application') {
+    steps {
+        script {
+            try {
+                echo "단계: ArgoCD 동기화 시작"
+                
+                // kubectl과 argocd CLI 설치
+                sh '''
+                    echo "kubectl 설치 중..."
+                    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                    chmod +x kubectl
+                    sudo mv kubectl /usr/local/bin/
+                    
+                    echo "ArgoCD CLI 설치 중..."
+                    curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+                    chmod +x argocd
+                    sudo mv argocd /usr/local/bin/
+                    
+                    echo "설치된 버전 확인..."
+                    kubectl version --client
+                    argocd version --client
+                '''
+                
+                sh """
+                    set -x
+                    
+                    echo "ArgoCD 서버 상태 확인..."
+                    ARGOCD_SERVER="aebaac6a687b24f28ad8311739898b12-2096717322.ap-northeast-2.elb.amazonaws.com"
+                    
+                    echo "ArgoCD 로그인..."
+                    argocd login \${ARGOCD_SERVER} \
+                        --username coconut \
+                        --password twinho3230 \
+                        --insecure \
+                        --grpc-web
+                    
+                    echo "애플리케이션 동기화 중..."
+                    argocd app sync frontend-app --grpc-web
+                    
+                    echo "애플리케이션 상태 대기 중..."
+                    argocd app wait frontend-app --health --timeout 300 --grpc-web
+                    
+                    echo "최종 애플리케이션 상태 확인..."
+                    argocd app get frontend-app --grpc-web
+                """
+                echo "ArgoCD 동기화 완료"
+            } catch (Exception e) {
+                error("ArgoCD 동기화 중 오류 발생: ${e.message}")
             }
         }
+    }
+}
     }
 
     post {
