@@ -24,5 +24,5 @@ spec:
       - name: ecr-credentials
       containers:
       - name: frontend
-        image: 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/castlehoo/frontend:5
+        image: 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/castlehoo/frontend:6
         imagePullPolicy: Always
