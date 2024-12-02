@@ -230,7 +230,7 @@ pipeline {
                                 git commit -m "Update frontend deployment to version ${DOCKER_TAG}" || echo "변경 사항 없음, 스킵"
                                 
                                 echo "GitHub로 푸시..."
-                                git remote set-url origin https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/yourorg/yourrepo.git
+                                git remote set-url origin https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/Coconut-Finance-Team/Coconut-Front-App.git
                                 git push origin main
                             """
                         }
