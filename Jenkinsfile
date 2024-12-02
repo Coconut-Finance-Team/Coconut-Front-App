@@ -185,7 +185,7 @@ sh """
     aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com
     
     echo "이미지 태깅 중..."
-    docker tag local-image-name:tag 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/castlehoo/frontend:${DOCKER_TAG}
+    docker tag castlehoo/frontend:1 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/castlehoo/frontend:1
     
     echo "ECR로 이미지 푸시 중..."
     docker push 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/castlehoo/frontend:${DOCKER_TAG}
