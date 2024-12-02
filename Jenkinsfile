@@ -182,13 +182,13 @@ pipeline {
                             
 sh """
     echo "ECR 로그인 중..."
-    aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 528757801774.dkr.ecr.ap-northeast-2.amazonaws.com
+    aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com
     
     echo "이미지 태깅 중..."
-    docker tag local-image-name:tag 528757801774.dkr.ecr.ap-northeast-2.amazonaws.com/castlehoo/frontend:${DOCKER_TAG}
+    docker tag local-image-name:tag 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/castlehoo/frontend:${DOCKER_TAG}
     
     echo "ECR로 이미지 푸시 중..."
-    docker push 528757801774.dkr.ecr.ap-northeast-2.amazonaws.com/castlehoo/frontend:${DOCKER_TAG}
+    docker push 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/castlehoo/frontend:${DOCKER_TAG}
     
     echo "푸시된 이미지 확인 중..."
     aws ecr describe-images --repository-name castlehoo/frontend --image-ids imageTag=${DOCKER_TAG} --region ap-northeast-2
@@ -216,7 +216,7 @@ stage('Update Kubernetes Manifests') {
                     git reset --hard origin/main
                     
                     echo "deployment.yaml 수정..."
-                    sed -i 's|image:.*|image: 528757801774.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}|' k8s/deployment.yaml
+                    sed -i 's|image:.*|image: 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/${ECR_REPOSITORY}:${DOCKER_TAG}|' k8s/deployment.yaml
                     
                     echo "Git 변경 사항 확인..."
                     git diff
@@ -258,7 +258,7 @@ stage('Update Kubernetes Manifests') {
                             kubectl config current-context
                             
                             echo "ArgoCD 서버 상태 확인..."
-                            ARGOCD_SERVER="ae0c624d8c8c34f46b9506de93d0e803-317719040.ap-northeast-2.elb.amazonaws.com"
+                            ARGOCD_SERVER="aebaac6a687b24f28ad8311739898b12-2096717322.ap-northeast-2.elb.amazonaws.com"
                             curl -k https://\${ARGOCD_SERVER}/api/version
                             
                             echo "ArgoCD 로그인 시도..."
