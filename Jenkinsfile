@@ -264,7 +264,7 @@ stage('Sync ArgoCD Application') {
                     argocd version --client
                     
                     echo "ArgoCD 서버 상태 확인..."
-                    ARGOCD_SERVER="aebaac6a687b24f28ad8311739898b12-2096717322.ap-northeast-2.elb.amazonaws.com"
+                    ARGOCD_SERVER="a05781a9c6d144c1ea3cc1830b87ba2f-1814107380.ap-northeast-2.elb.amazonaws.com"
                     
                     echo "ArgoCD 로그인..."
                     argocd login \${ARGOCD_SERVER} \
