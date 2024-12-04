@@ -2,7 +2,6 @@
   "name": "coconut-front-app",
   "version": "0.1.0",
   "private": true,
-  "proxy": "http://localhost:8080",
   "dependencies": {
     "@ant-design/icons": "^5.5.1",
     "@emotion/react": "^11.13.3",

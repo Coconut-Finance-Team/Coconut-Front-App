@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import styled, { createGlobalStyle } from 'styled-components';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+
 const GlobalStyle = createGlobalStyle`
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
   
@@ -220,7 +222,7 @@ function FindPassword() {
   const handleSendVerification = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('/api/send-verification-code', {
+      const response = await axios.post(`${API_BASE_URL}/send-verification-code`, {
         email: formData.email,
         phone: formData.phone
       });
@@ -239,7 +241,7 @@ function FindPassword() {
   const handleVerifyCode = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('/api/verify-code', {
+      const response = await axios.post(`${API_BASE_URL}/verify-code`, {
         email: formData.email,
         code: formData.verificationCode
       });
@@ -261,7 +263,7 @@ function FindPassword() {
       return;
     }
     try {
-      const response = await axios.post('/api/update-password', {
+      const response = await axios.post(`${API_BASE_URL}/update-password`, {
         email: formData.email,
         password: formData.newPassword
       });

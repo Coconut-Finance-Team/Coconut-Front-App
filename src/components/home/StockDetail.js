@@ -7,6 +7,8 @@ import skImage from '../../assets/sk.png';
 import samsungImage from '../../assets/samsung.png';
 import lgImage from '../../assets/lg.png';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+
 const STOCK_INFO = {
   '005930': {
     name: '삼성전자',
@@ -628,7 +630,7 @@ function StockDetail() {
 
   const fetchUserData = async (token) => {
     try {
-      const response = await axios.get('http://localhost:8080/api/v1/users/me', {
+      const response = await axios.get('${API_BASE_URL}/v1/users/me', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -673,7 +675,7 @@ function StockDetail() {
       };
 
       const response = await axios.post(
-        `http://localhost:8080/api/v1/${orderType}-order`,
+        `${API_BASE_URL}/${orderType}-order`,
         orderDTO,
         {
           headers: {

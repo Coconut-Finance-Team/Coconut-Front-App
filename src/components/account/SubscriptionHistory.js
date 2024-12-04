@@ -10,8 +10,10 @@ import "react-datepicker/dist/react-datepicker.css";
 registerLocale('ko', ko);
 
 // API 관련 설정
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   }

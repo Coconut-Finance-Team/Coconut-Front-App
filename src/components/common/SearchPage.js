@@ -3,6 +3,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import axios from 'axios';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+
 const SearchContainer = styled.div`
   padding: 24px;
   max-width: 1200px;
@@ -52,7 +54,7 @@ const SearchPage = () => {
       setLoading(true);
       try {
         const response = await axios.get(
-          `http://localhost:8080/api/v1/stock/search`,
+          `${API_BASE_URL}/stock/search`,
           {
             params: { keyword: query },
           }

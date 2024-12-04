@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { IdcardOutlined } from '@ant-design/icons';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+
 function SigninAddInfo() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -34,7 +36,8 @@ function SigninAddInfo() {
         socialSecurityNumber: prevFormData.birthDate + prevFormData.ssn  // 주민번호 결합
       };
 
-     const response = await axios.post('http://localhost:8080/api/v1/users/register', registerRequest);
+      const response = await axios.post(`${API_BASE_URL}/users/register`, registerRequest);
+    
      
      if (response.status === 200) {
        navigate('/login');

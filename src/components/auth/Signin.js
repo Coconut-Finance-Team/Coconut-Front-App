@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLocation, useNavigate } from 'react-router-dom';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+
 function Signin() {
   const location = useLocation();
   const [isGoogleUser, setIsGoogleUser] = useState(false);
@@ -124,7 +126,7 @@ useEffect(() => {
   if (!validateInputs()) return;
 
   try {
-    const response = await axios.post('http://localhost:8080/api/v1/email/verify/send', {
+    const response = await axios.post(`${API_BASE_URL}/email/verify/send`, {
       email: formData.email
     });
 
@@ -154,14 +156,13 @@ useEffect(() => {
    }
 
    try {
-     // 이메일 인증 코드 확인 (구글 로그인 사용자는 스킵)
-     if (!isGoogleUser) {
-       const verifyResponse = await axios.post('http://localhost:8080/api/v1/email/verify', null, {
-         params: { 
-           email: formData.email,
-           code: verificationCode
-         }
-       });
+    if (!isGoogleUser) {
+      const verifyResponse = await axios.post(`${API_BASE_URL}/email/verify`, null, {
+        params: { 
+          email: formData.email,
+          code: verificationCode
+        }
+      });
 
        if (!verifyResponse.data.success) {
          setErrorMessage('인증번호가 일치하지 않습니다.');
