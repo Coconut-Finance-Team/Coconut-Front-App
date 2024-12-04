@@ -133,30 +133,35 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
-            steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    script {
-                        try {
-                            echo "단계: Docker 이미지 빌드 시작"
-                            sh """
-                                echo "Docker 빌드 컨텍스트 확인..."
-                                ls -la
-                                
-                                echo "Docker 이미지 빌드 중... (태그: ${DOCKER_TAG})"
-                                docker build -t ${ECR_REPOSITORY}:${DOCKER_TAG} .
-                                
-                                echo "빌드된 Docker 이미지 확인"
-                                docker images | grep ${ECR_REPOSITORY}
-                            """
-                            echo "Docker 이미지 빌드 완료"
-                        } catch (Exception e) {
-                            error("Docker 이미지 빌드 중 오류 발생: ${e.message}")
-                        }
-                    }
+stage('Build Docker Image') {
+    steps {
+        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+            script {
+                try {
+                    echo "단계: Docker 이미지 빌드 시작"
+                    sh """
+                        echo "현재 작업 디렉토리 및 파일 확인..."
+                        pwd
+                        ls -la
+                        
+                        echo "nginx 디렉토리 구조 설정..."
+                        mkdir -p nginx
+                        cp nginx.conf nginx/nginx.conf
+                        
+                        echo "Docker 이미지 빌드 중... (태그: ${DOCKER_TAG})"
+                        docker build -t ${ECR_REPOSITORY}:${DOCKER_TAG} .
+                        
+                        echo "빌드된 Docker 이미지 확인"
+                        docker images | grep ${ECR_REPOSITORY}
+                    """
+                    echo "Docker 이미지 빌드 완료"
+                } catch (Exception e) {
+                    error("Docker 이미지 빌드 중 오류 발생: ${e.message}")
                 }
             }
         }
+    }
+}
 
         stage('Push to AWS ECR') {
             steps {
