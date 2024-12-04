@@ -17,9 +17,10 @@ import SigninAddInfo from './components/auth/SigninAddInfo';
 import FindIdPassword from './components/auth/FindIdPassword';
 import RealTimeChart from './components/home/RealTimeChart';
 import StockDetail from './components/home/StockDetail';
-import ChartDetail from './components/home/ChartDetail';
+import MarketChart from './components/home/MarketChart';
 import SearchPage from './components/common/SearchPage';
 import AdminPage from './components/admin/AdminPage';
+import MyPage from './components/mypage';
 
 const GlobalStyle = createGlobalStyle`
   body {
@@ -55,23 +56,40 @@ function App() {
             <Route path="/" element={<Homeboard />} />
             <Route
               path="/account/*"
-              element={user ? <Account /> : <Navigate to="/Login" replace />}
+              element={<Account user={user} setUser={setUser} />}
             />
-            <Route path="/subscription" element={<Navigate to="/subscription/table" replace />} />
-            <Route path="/subscription/*" element={<Subscription />} />
-            <Route path="/subscription/apply/:id" element={<SubscriptionApply />} />
+
+            {/* Subscription 관련 라우트 정리 */}
             <Route path="/subscription/apply/confirm" element={<SubscriptionConfirm />} />
             <Route path="/subscription/apply/complete" element={<SubscriptionComplete />} />
+            <Route path="/subscription/apply" element={<SubscriptionApply />} />
             <Route path="/subscription/inquiry" element={<SubscriptionInquiry />} />
-            <Route path="/Login" element={<Login setUser={setUser} />} />
+            <Route path="/subscription" element={<Navigate to="/subscription/table" replace />} />
+            <Route path="/subscription/*" element={<Subscription />} />
+
+            {/* Auth 관련 라우트 */}
+            <Route path="/login" element={<Login setUser={setUser} />} />
             <Route path="/signin" element={<Signin />} />
             <Route path="/signup/userinfo" element={<SigninUserInfo />} />
             <Route path="/signup/signinaddinfo" element={<SigninAddInfo />} />
             <Route path="/findidpassword" element={<FindIdPassword />} />
             <Route path="/chart" element={<RealTimeChart />} />
+
+            {/* 주식 상세 페이지 라우트 */}
             <Route path="/stock/:stockId" element={<StockDetail />} />
-            <Route path="/chart/detail" element={<ChartDetail />} />
+            
+            {/* /stock으로 시작하는 기존 URL을 /stocks로 리다이렉트 */}
+            <Route
+              path="/stock/:stockId"
+              element={<Navigate to={location => `/stock/${location.pathname.split('/')[2]}`} replace />}
+            />
+
+            {/* MarketChart로 변경된 코스피/코스닥 차트 라우트 */}
+            <Route path="/chart/kospi" element={<MarketChart />} />
+            <Route path="/chart/kosdaq" element={<MarketChart />} />
+            
             <Route path="/search" element={<SearchPage />} />
+            <Route path="/mypage" element={<MyPage user={user} />} />
           </Routes>
         </main>
         <Footer />
@@ -79,17 +97,5 @@ function App() {
     </>
   );
 }
-
-
-const AppContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  background-color: #ffffff;
-`;
-
-const MainContent = styled.main`
-  flex: 1;
-`;
 
 export default App;

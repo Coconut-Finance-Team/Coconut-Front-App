@@ -91,22 +91,45 @@ const ModalContent = styled.div`
   scrollbar-width: none;
 `;
 
+const TOTAL_STEPS = 6;
+
+const STEP_TITLES = {
+  1: '계좌 만들기',
+  2: '약관 동의',
+  3: '본인 확인',
+  4: '계좌 정보',
+  5: '비밀번호 설정',
+  6: '완료'
+};
+
 function CreateAccountModal({ onClose }) {
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 6;
   const [formData, setFormData] = useState({
     termsAgreed: [],
-    identityInfo: null,
-    accountInfo: null,
-    password: null,
+    identityInfo: {},
+    accountInfo: {},
+    password: ''
   });
 
-  const updateFormData = (data) => {
-    setFormData(prev => ({ ...prev, ...data }));
+  const getStepTitle = () => {
+    return STEP_TITLES[currentStep] || '';
+  };
+
+  console.log('Current Form Data in Modal:', formData);
+
+  const updateFormData = (newData) => {
+    console.log('Updating form data with:', newData);
+    setFormData(prev => {
+      const updated = { ...prev, ...newData };
+      console.log('Updated form data:', updated);
+      return updated;
+    });
   };
 
   const handleNext = () => {
-    if (currentStep < totalSteps) {
+    console.log(`Moving from step ${currentStep} to ${currentStep + 1}`);
+    console.log('Form data at step transition:', formData);
+    if (currentStep < TOTAL_STEPS) {
       setCurrentStep(prev => prev + 1);
     }
   };
@@ -117,18 +140,6 @@ function CreateAccountModal({ onClose }) {
     }
   };
 
-  const getStepTitle = () => {
-    switch (currentStep) {
-      case 1: return '계좌 만들기';
-      case 2: return '약관 동의';
-      case 3: return '본인 확인';
-      case 4: return '계좌 정보';
-      case 5: return '비밀번호 설정';
-      case 6: return '완료';
-      default: return '';
-    }
-  };
-
   const renderStep = () => {
     const props = {
       onNext: handleNext,
@@ -136,6 +147,8 @@ function CreateAccountModal({ onClose }) {
       formData,
       updateFormData,
     };
+
+    console.log(`Rendering step ${currentStep} with props:`, props);
 
     switch (currentStep) {
       case 1:
@@ -149,7 +162,7 @@ function CreateAccountModal({ onClose }) {
       case 5:
         return <Step5Password {...props} />;
       case 6:
-        return <Step6Complete onClose={onClose} />;
+        return <Step6Complete onClose={onClose} formData={formData} />;
       default:
         return null;
     }
@@ -163,7 +176,7 @@ function CreateAccountModal({ onClose }) {
           <CloseButton onClick={onClose}>×</CloseButton>
         </ModalHeader>
         
-        <ProgressBar progress={currentStep / totalSteps} />
+        <ProgressBar progress={currentStep / TOTAL_STEPS} />
         
         <ModalContent>
           {renderStep()}

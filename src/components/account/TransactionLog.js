@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import styled, { createGlobalStyle } from 'styled-components';
+import axios from 'axios';
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 const GlobalStyle = createGlobalStyle`
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
@@ -103,12 +106,12 @@ const Modal = styled.div`
   left: 50%;
   transform: translate(-50%, -50%);
   background: white;
-  padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 48px 24px;
+  border-radius: 20px;          // 모서리를 더 둥글게
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);  // 그림자를 더 자연스럽게
   z-index: 1000;
   width: 90%;
-  max-width: 400px;
+  max-width: 420px;
 `;
 
 const Overlay = styled.div`
@@ -124,8 +127,9 @@ const Overlay = styled.div`
 const DetailRow = styled.div`
   display: flex;
   justify-content: space-between;
-  margin-bottom: 12px;
-  font-size: 14px;
+  margin-bottom: 16px;
+  font-size: 15px;
+  padding: 8px 0;
   
   &:last-child {
     margin-bottom: 0;
@@ -134,125 +138,162 @@ const DetailRow = styled.div`
 
 const DetailLabel = styled.span`
   color: #666;
+  font-weight: 400;
 `;
 
 const DetailValue = styled.span`
   color: #333;
-  font-weight: 500;
+  text-align: right;
+  font-weight: 400;
 `;
 
 const CloseButton = styled.button`
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 2px;
+  right: 12px;
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: 24px;
   cursor: pointer;
   color: #666;
+  width: 24px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
 `;
 
 const TransactionLog = () => {
   const [transactions, setTransactions] = useState([]);
-  const [returnRate, setReturnRate] = useState(0);
   const [activeFilter, setActiveFilter] = useState('전체');
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [detailData, setDetailData] = useState(null);
-
-  const fetchTransactions = async (type = '전체') => {
-    try {
-      let endpoint = '';
-      switch(type) {
-        case '거래':
-          endpoint = '/api/transactions/trade';
-          break;
-        case '입출금':
-          endpoint = '/api/transactions/deposit';
-          break;
-        default:
-          endpoint = '/api/transactions';
-      }
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          uuid: 'ao3r2kngd-39d-dsjen-398djfkjf'
-        })
-      });
-
-      if (!response.ok) throw new Error('API 요청 실패');
-
-      const data = await response.json();
-      setReturnRate(data.return_rate);
-      setTransactions(data.transaction_history || []);
-    } catch (error) {
-      console.error('거래내역 조회 중 오류 발생:', error);
-    }
-  };
-
-  const fetchTransactionDetail = async (transaction) => {
-    try {
-      let endpoint = '';
-      let body = {
-        uuid: 'ao3r2kngd-39d-dsjen-398djfkjf'
-      };
-
-      if (transaction.type === '거래') {
-        endpoint = '/api/transactions/trade/detail';
-        body.trade_id = transaction.id;
-      } else if (transaction.type === '입출금') {
-        endpoint = '/api/transactions/deposit/detail';
-        body.transaction_id = transaction.id;
-      }
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body)
-      });
-
-      if (!response.ok) throw new Error('상세 정보 조회 실패');
-
-      const data = await response.json();
-      setDetailData(data);
-    } catch (error) {
-      console.error('상세 정보 조회 중 오류 발생:', error);
-    }
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
+  
+  // 상태 매핑
+  const statusMapping = {
+    'DEPOSIT': '입금',
+    'WITHDRAWAL': '출금',
+    'BUY': '매수',
+    'SELL': '매도'
   };
 
   useEffect(() => {
-    fetchTransactions('전체');
-  }, []);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const token = localStorage.getItem('jwtToken');
+        
+        if (!token) {
+          setError('로그인이 필요합니다.');
+          setLoading(false);
+          return;
+        }
+
+        const headers = {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        };
+
+        const userResponse = await axios.get(`${API_BASE_URL}/users/me`, { headers });
+        setUser(userResponse.data);
+        const primaryAccountId = userResponse.data.primaryAccountId;
+
+        if (!primaryAccountId) {
+          setError('주계좌 정보를 찾을 수 없습니다.');
+          setLoading(false);
+          return;
+        }
+
+        let endpoint = `${API_BASE_URL}/account/transactions/all`;
+        const response = await axios.get(endpoint, {
+          headers,
+          params: {
+            accountId: primaryAccountId,
+            type: activeFilter !== '전체' ? activeFilter : undefined
+          }
+        });
+
+        // 데이터 처리 및 필터링
+        let processedTransactions = (response.data || []).map(transaction => ({
+          ...transaction,
+          status: statusMapping[transaction.status] || transaction.status
+        }));
+
+        if (activeFilter !== '전체') {
+          processedTransactions = processedTransactions.filter(
+            transaction => transaction.type === activeFilter
+          );
+        }
+
+        setTransactions(processedTransactions);
+
+      } catch (error) {
+        console.error('API 호출 중 에러 발생:', error);
+        if (error.response?.status === 401) {
+          setError('로그인이 만료되었습니다. 다시 로그인해주세요.');
+          localStorage.removeItem('jwtToken');
+        } else {
+          setError(
+            error.response?.data?.message ||
+            '정보를 불러오는데 실패했습니다. 잠시 후 다시 시도해주세요.'
+          );
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [activeFilter]);
 
   const handleFilterClick = (filter) => {
     setActiveFilter(filter);
-    fetchTransactions(filter);
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}년 ${month}월 ${day}일 ${hours}시 ${minutes}분`;
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return dateStr;
+    }
+  };
+
+  const formatAmount = (amount) => {
+    if (amount === undefined || amount === null) return '0원';
+    return amount.toLocaleString() + '원';
   };
 
   const handleTransactionClick = (transaction) => {
     setSelectedTransaction(transaction);
-    fetchTransactionDetail(transaction);
-  };
-
-  const formatDateTime = (timestamp) => {
-    return new Date(timestamp).toLocaleString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
+    setDetailData({
+      type: transaction.type,
+      name: transaction.name,
+      amount: transaction.amount,
+      quantity: transaction.quantity,
+      time: transaction.date,
+      status: transaction.status
     });
   };
 
   const renderDetailContent = () => {
     if (!detailData) return null;
 
-    if (selectedTransaction?.type === '거래') {
+    if (detailData.type === '거래') {
       return (
         <>
           <DetailRow>
@@ -261,40 +302,52 @@ const TransactionLog = () => {
           </DetailRow>
           <DetailRow>
             <DetailLabel>종목명</DetailLabel>
-            <DetailValue>{detailData.stock_name}</DetailValue>
+            <DetailValue>{detailData.name}</DetailValue>
           </DetailRow>
           <DetailRow>
-            <DetailLabel>거래 가격</DetailLabel>
-            <DetailValue>{detailData.total_price.toLocaleString()}원</DetailValue>
+            <DetailLabel>상태</DetailLabel>
+            <DetailValue>{detailData.status}</DetailValue>
+          </DetailRow>
+          <DetailRow>
+            <DetailLabel>거래 금액</DetailLabel>
+            <DetailValue>{formatAmount(detailData.amount)}</DetailValue>
           </DetailRow>
           <DetailRow>
             <DetailLabel>거래 수량</DetailLabel>
             <DetailValue>{detailData.quantity}주</DetailValue>
           </DetailRow>
           <DetailRow>
-            <DetailLabel>거래 시간</DetailLabel>
-            <DetailValue>{formatDateTime(detailData.order_time)}</DetailValue>
-          </DetailRow>
-        </>
-      );
-    } else {
-      return (
-        <>
-          <DetailRow>
-            <DetailLabel>거래 종류</DetailLabel>
-            <DetailValue>{detailData.type}</DetailValue>
-          </DetailRow>
-          <DetailRow>
-            <DetailLabel>금액</DetailLabel>
-            <DetailValue>{detailData.amount.toLocaleString()}원</DetailValue>
-          </DetailRow>
-          <DetailRow>
-            <DetailLabel>거래 시간</DetailLabel>
-            <DetailValue>{formatDateTime(detailData.time)}</DetailValue>
+            <DetailLabel>거래 날짜</DetailLabel>
+            <DetailValue>{formatDate(detailData.time)}</DetailValue>
           </DetailRow>
         </>
       );
     }
+
+    return (
+      <>
+        <DetailRow>
+          <DetailLabel>거래 종류</DetailLabel>
+          <DetailValue>{detailData.type}</DetailValue>
+        </DetailRow>
+        <DetailRow>
+          <DetailLabel>거래자</DetailLabel>
+          <DetailValue>{detailData.name}</DetailValue>
+        </DetailRow>
+        <DetailRow>
+          <DetailLabel>상태</DetailLabel>
+          <DetailValue>{detailData.status}</DetailValue>
+        </DetailRow>
+        <DetailRow>
+          <DetailLabel>금액</DetailLabel>
+          <DetailValue>{formatAmount(detailData.amount)}</DetailValue>
+        </DetailRow>
+        <DetailRow>
+          <DetailLabel>거래 날짜</DetailLabel>
+          <DetailValue>{formatDate(detailData.time)}</DetailValue>
+        </DetailRow>
+      </>
+    );
   };
 
   return (
@@ -302,7 +355,19 @@ const TransactionLog = () => {
       <GlobalStyle />
       <Container>
         <Title>거래내역</Title>
-        <AvailableAmount>수익률: {returnRate}%</AvailableAmount>
+
+        {error && (
+          <div style={{ 
+            color: '#dc3545', 
+            padding: '16px', 
+            marginBottom: '16px', 
+            background: '#ffebee', 
+            borderRadius: '8px',
+            border: '1px solid #dc3545' 
+          }}>
+            {error}
+          </div>
+        )}
 
         <FilterContainer>
           <FilterButton 
@@ -314,34 +379,42 @@ const TransactionLog = () => {
             onClick={() => handleFilterClick('거래')}
           >거래</FilterButton>
           <FilterButton 
-            active={activeFilter === '환전'}
-            onClick={() => handleFilterClick('환전')}
-          >환전</FilterButton>
-          <FilterButton 
             active={activeFilter === '입출금'}
             onClick={() => handleFilterClick('입출금')}
           >입출금</FilterButton>
         </FilterContainer>
 
-        <TransactionList>
-          {transactions.map((transaction, index) => (
-            <TransactionItem 
-              key={index}
-              onClick={() => handleTransactionClick(transaction)}
-            >
-              <TransactionInfo>
-                <TransactionDate>{transaction.date}</TransactionDate>
-                <TransactionTitle>{transaction.name}</TransactionTitle>
-                <TransactionDetail>{transaction.status}</TransactionDetail>
-              </TransactionInfo>
-              <TransactionAmount>
-                <Amount isPositive={transaction.amount > 0}>
-                  {transaction.amount > 0 ? '+' : ''}{transaction.amount.toLocaleString()}원
-                </Amount>
-              </TransactionAmount>
-            </TransactionItem>
-          ))}
-        </TransactionList>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+            로딩중...
+          </div>
+        ) : (
+          <TransactionList>
+            {transactions.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                거래내역이 없습니다.
+              </div>
+            ) : (
+              transactions.map((transaction, index) => (
+                <TransactionItem 
+                  key={index}
+                  onClick={() => handleTransactionClick(transaction)}
+                >
+                  <TransactionInfo>
+                    <TransactionDate>{formatDate(transaction.date)}</TransactionDate>
+                    <TransactionTitle>{transaction.name}</TransactionTitle>
+                    <TransactionDetail>{transaction.status}</TransactionDetail>
+                  </TransactionInfo>
+                  <TransactionAmount>
+                    <Amount isPositive={transaction.amount > 0}>
+                      {transaction.amount > 0 ? '+' : ''}{formatAmount(transaction.amount)}
+                    </Amount>
+                  </TransactionAmount>
+                </TransactionItem>
+              ))
+            )}
+          </TransactionList>
+        )}
 
         {selectedTransaction && (
           <>

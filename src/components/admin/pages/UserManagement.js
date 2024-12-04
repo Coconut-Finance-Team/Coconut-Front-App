@@ -1,5 +1,7 @@
-import React, { useState } from 'react';  // useState import 추가
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import UserDetail from './UserDetail';
+import { useNavigate } from 'react-router-dom';
 
 const styles = `
   .user-management-container {
@@ -130,30 +132,140 @@ const styles = `
     background-color: #3b82f6;
     color: white;
   }
+
+  .loading {
+    text-align: center;
+    padding: 20px;
+    color: #64748b;
+  }
+
+  .error {
+    text-align: center;
+    padding: 20px;
+    color: #dc2626;
+    background-color: #fee2e2;
+    border-radius: 6px;
+    margin: 20px 0;
+  }
 `;
 
 const UserManagement = () => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [roleFilter, setRoleFilter] = useState('all');
-    const [selectedUser, setSelectedUser] = useState(null);
-  
-    const initialUsers = [
-      { id: '사용자1', email: 'user1@example.com', phone: '010-1234-5670', date: '2024.03.11', status: '활성', role: '관리자' },
-      { id: '사용자2', email: 'user2@example.com', phone: '010-1234-5671', date: '2024.03.12', status: '비활성', role: '일반' },
-      { id: '사용자3', email: 'user3@example.com', phone: '010-1234-5672', date: '2024.03.13', status: '활성', role: '일반' },
-      { id: '사용자4', email: 'user4@example.com', phone: '010-1234-5673', date: '2024.03.14', status: '비활성', role: '관리자' },
-      { id: '사용자5', email: 'user5@example.com', phone: '010-1234-5674', date: '2024.03.15', status: '활성', role: '일반' },
-    ];
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const navigate = useNavigate();
 
-  const filteredUsers = initialUsers.filter(user => {
+  useEffect(() => {
+    const checkAndFetchUsers = async () => {
+      const token = localStorage.getItem('jwtToken');
+      console.log('저장된 토큰:', token);
+
+      if (token) {
+        try {
+          // JWT 토큰 디코딩
+          const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+          console.log('토큰 페이로드:', tokenPayload);
+
+          // 사용자 정보 가져오기
+          const userResponse = await fetch('http://localhost:8080/api/v1/users/me', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (!userResponse.ok) {
+            console.error('사용자 정보 가져오기 실패');
+            localStorage.removeItem('jwtToken');
+            setCurrentUser(null);
+            navigate('/login');
+            return;
+          }
+
+          const userData = await userResponse.json();
+          console.log('받아온 사용자 정보:', userData);
+          setCurrentUser(userData);
+
+          // 전체 사용자 목록 가져오기 시도
+          const usersResponse = await fetch('http://localhost:8080/api/v1/admin/read/user/all', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (usersResponse.ok) {
+            const usersData = await usersResponse.json();
+            setUsers(usersData);
+            setError(null);
+          } else {
+            // 관리자 API 접근이 실패하면 에러 메시지 표시
+            throw new Error('관리자 권한이 필요한 페이지입니다.');
+          }
+        } catch (error) {
+          console.error('API 호출 에러:', error);
+          setError(error.message);
+          if (error.message.includes('관리자 권한')) {
+            navigate('/');  // 또는 다른 적절한 페이지로 리다이렉트
+          }
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        navigate('/login');
+      }
+    };
+
+    checkAndFetchUsers();
+  }, [navigate]);
+
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  };
+
+  const formatStatus = (status) => {
+    switch (status) {
+      case 'ACTIVE':
+        return '활성';
+      case 'SUSPENDED':
+        return '비활성';
+      default:
+        return status;
+    }
+  };
+
+  const formatRole = (role) => {
+    switch (role) {
+      case 'ADMIN':
+        return '관리자';
+      case 'USER':
+        return '일반';
+      default:
+        return role;
+    }
+  };
+
+  const filteredUsers = users.filter(user => {
     const matchesSearch = 
-      user.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.phone.includes(searchTerm);
 
-    const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+    const statusValue = formatStatus(user.status);
+    const roleValue = formatRole(user.role);
+
+    const matchesStatus = statusFilter === 'all' || statusValue === statusFilter;
+    const matchesRole = roleFilter === 'all' || roleValue === roleFilter;
 
     return matchesSearch && matchesStatus && matchesRole;
   });
@@ -176,6 +288,7 @@ const UserManagement = () => {
 
   if (selectedUser) {
     return <UserDetail 
+      user={selectedUser}
       onBack={() => setSelectedUser(null)}
     />;
   }
@@ -206,52 +319,60 @@ const UserManagement = () => {
           </div>
         </div>
 
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>이름</th>
-                <th>이메일</th>
-                <th>전화번호</th>
-                <th>가입일</th>
-                <th>직책</th>
-                <th>상태</th>
-                <th>관리</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((user) => (
-                <tr key={user.id}>
-                  <td>{user.id}</td>
-                  <td>{user.email}</td>
-                  <td>{user.phone}</td>
-                  <td>{user.date}</td>
-                  <td>{user.role}</td>
-                  <td>
-                    <span className={`status-badge ${user.status === '비활성' ? 'inactive' : ''}`}>
-                      {user.status}
-                    </span>
-                  </td>
-                  <td>
-                    <button 
-                      className="detail-button"
-                      onClick={() => handleDetailClick(user)}
-                    >
-                      상세
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {loading ? (
+          <div className="loading">데이터를 불러오는 중...</div>
+        ) : error ? (
+          <div className="error">{error}</div>
+        ) : (
+          <>
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>이름</th>
+                    <th>이메일</th>
+                    <th>전화번호</th>
+                    <th>가입일</th>
+                    <th>직책</th>
+                    <th>상태</th>
+                    <th>관리</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map((user) => (
+                    <tr key={user.uuid}>
+                      <td>{user.username}</td>
+                      <td>{user.email}</td>
+                      <td>{user.phone}</td>
+                      <td>{formatDate(user.createTime)}</td>
+                      <td>{formatRole(user.role)}</td>
+                      <td>
+                        <span className={`status-badge ${formatStatus(user.status) === '비활성' ? 'inactive' : ''}`}>
+                          {formatStatus(user.status)}
+                        </span>
+                      </td>
+                      <td>
+                        <button 
+                          className="detail-button"
+                          onClick={() => handleDetailClick(user)}
+                        >
+                          상세
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-        <div className="pagination">
-          <button className="active">1</button>
-          {[2, 3, 4, 5].map((page) => (
-            <button key={page}>{page}</button>
-          ))}
-        </div>
+            <div className="pagination">
+              <button className="active">1</button>
+              {[2, 3, 4, 5].map((page) => (
+                <button key={page}>{page}</button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </>
   );

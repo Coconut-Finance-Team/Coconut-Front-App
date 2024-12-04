@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FormContainer,
   Title,
@@ -24,9 +25,12 @@ const purposes = [
 ];
 
 function Step4AccountType({ onNext, onPrev, formData, updateFormData }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const prevFormData = location.state || {};
   const [accountInfo, setAccountInfo] = useState({
-    purpose: formData.accountInfo?.purpose || '',
-    alias: formData.accountInfo?.alias || ''
+    purpose: prevFormData.accountInfo?.purpose || '',
+    alias: prevFormData.accountInfo?.alias || ''
   });
   
   const [errors, setErrors] = useState({});
@@ -56,12 +60,17 @@ function Step4AccountType({ onNext, onPrev, formData, updateFormData }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNext = () => {
-    if (validateForm()) {
-      updateFormData({ accountInfo });
-      onNext();
-    }
-  };
+// Step4AccountType.js에서 계좌 정보 처리
+const handleNext = () => {
+  if (validateForm()) {
+    console.log('Updating account info:', accountInfo);
+    updateFormData({
+      accountInfo: accountInfo
+    });
+    onNext();
+  }
+};
+
 
   return (
     <FormContainer>
