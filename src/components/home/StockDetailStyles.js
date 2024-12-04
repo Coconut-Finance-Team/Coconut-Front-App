@@ -36,6 +36,7 @@ export const Header = styled.div`
   align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 24px;
+  padding: 0 4px;
 `;
 
 export const StockInfo = styled.div`
@@ -103,7 +104,7 @@ export const TabButton = styled.button`
   color: ${props => props.active ? '#222222' : '#888888'};
   border-bottom: 2px solid ${props => props.active ? '#222222' : 'transparent'};
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
 
   &:hover {
     color: #222222;
@@ -114,6 +115,7 @@ export const TimeframeButtons = styled.div`
   display: flex;
   gap: 8px;
   margin-bottom: 24px;
+  padding: 0 4px;
 `;
 
 export const TimeButton = styled.button`
@@ -125,26 +127,40 @@ export const TimeButton = styled.button`
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: all 0.15s;
 
   &:hover {
     background: ${props => props.active ? '#2b2b2b' : '#f8f8f8'};
   }
 `;
 
-export const ChartContainer = styled.div`
+export const ChartsContainer = styled.div`
   width: 100%;
-  height: 450px;
+  height: 600px;
+  display: flex;
+  flex-direction: column;
   margin-bottom: 24px;
   
   @media (max-width: 768px) {
-    height: 350px;
+    height: 450px;
   }
+`;
+
+export const PriceChartContainer = styled.div`
+  width: 100%;
+  flex: 0.7;
+`;
+
+export const VolumeChartContainer = styled.div`
+  width: 100%;
+  flex: 0.3;
+  margin-top: 1px;
 `;
 
 export const OrderBoxContainer = styled.div`
   flex: 1;
   min-width: 320px;
+  max-width: 400px;
   background: #ffffff;
   border: 1px solid #f0f0f0;
   border-radius: 12px;
@@ -152,6 +168,9 @@ export const OrderBoxContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
+  align-self: flex-start;
+  position: sticky;
+  top: 20px;
 `;
 
 export const OrderTypeContainer = styled.div`
@@ -170,7 +189,7 @@ export const OrderTypeButton = styled.button`
   background: ${props => props.active ? (props.buy ? '#ff4747' : '#4788ff') : '#f8f8f8'};
   color: ${props => props.active ? '#ffffff' : '#666666'};
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
 
   &:hover {
     background: ${props => props.active ? 
@@ -212,6 +231,16 @@ export const PriceInput = styled.div`
     &:focus {
       outline: none;
     }
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    &[type=number] {
+      -moz-appearance: textfield;
+    }
   }
 
   span {
@@ -236,7 +265,7 @@ export const QuantityButton = styled.button`
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
 
   &:hover {
     background: #f8f8f8;
@@ -278,7 +307,7 @@ export const OrderButton = styled.button`
   font-size: 16px;
   font-weight: 600;
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  transition: all 0.2s;
+  transition: all 0.15s;
 
   &:hover {
     background: ${props => props.disabled ? '#e0e0e0' : (props.buy ? '#ff3b3b' : '#3b7bff')};

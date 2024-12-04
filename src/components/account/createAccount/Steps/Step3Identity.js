@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FormContainer,
   Title,
@@ -14,10 +15,14 @@ import {
 } from '../styles/CommonStyles';
 
 function Step3Identity({ onNext, onPrev, formData, updateFormData }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const prevFormData = location.state || {};
+  
   const [identity, setIdentity] = useState({
-    username: formData.identityInfo?.username || '',
-    socialSecurityNumber: formData.identityInfo?.socialSecurityNumber || '',
-    phone: formData.identityInfo?.phone || ''
+    username: prevFormData.identityInfo?.username || '',
+    socialSecurityNumber: prevFormData.identityInfo?.socialSecurityNumber || '',
+    phone: prevFormData.identityInfo?.phone || ''
   });
   
   const [errors, setErrors] = useState({});
@@ -76,7 +81,10 @@ function Step3Identity({ onNext, onPrev, formData, updateFormData }) {
 
   const handleNext = () => {
     if (validateForm()) {
-      updateFormData({ identityInfo: identity });
+      console.log('Updating identity info:', identity);
+      updateFormData({
+        identityInfo: identity
+      });
       onNext();
     }
   };

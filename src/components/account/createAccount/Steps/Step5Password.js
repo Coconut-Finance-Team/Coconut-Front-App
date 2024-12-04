@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 
 const Container = styled.div`
@@ -58,8 +59,11 @@ const ErrorMessage = styled.p`
   margin-top: 16px;
 `;
 
-const Step5Password = ({ onNext }) => {
+const Step5Password = ({ onNext, onPrev, formData, updateFormData }) => {
   const [pin, setPin] = useState('');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const prevFormData = location.state || {};
   const [confirmPin, setConfirmPin] = useState('');
   const [step, setStep] = useState('create'); // create or confirm
   const [error, setError] = useState('');
@@ -94,19 +98,24 @@ const Step5Password = ({ onNext }) => {
     }
   };
 
-  useEffect(() => {
-    if (pin.length === 4 && step === 'create') {
-      setStep('confirm');
-    } else if (confirmPin.length === 4 && step === 'confirm') {
-      if (pin === confirmPin) {
-        onNext({ password: pin });
-      } else {
-        setError('비밀번호가 일치하지 않습니다.');
-        setConfirmPin('');
-        setTimeout(() => setError(''), 3000);
-      }
+// Step5Password.js에서 비밀번호 처리
+useEffect(() => {
+  if (pin.length === 4 && step === 'create') {
+    setStep('confirm');
+  } else if (confirmPin.length === 4 && step === 'confirm') {
+    if (pin === confirmPin) {
+      console.log('Updating password:', pin);
+      updateFormData({
+        password: pin
+      });
+      onNext();
+    } else {
+      setError('비밀번호가 일치하지 않습니다.');
+      setConfirmPin('');
+      setTimeout(() => setError(''), 3000);
     }
-  }, [pin, confirmPin, step, onNext]);
+  }
+}, [pin, confirmPin, step]);
 
   return (
     <Container>

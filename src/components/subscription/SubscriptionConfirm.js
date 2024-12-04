@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
+import axios from 'axios';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -95,22 +96,65 @@ const Button = styled.button`
   border-radius: 8px;
   font-size: 16px;
   font-weight: 500;
-  cursor: pointer;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   font-family: 'Noto Sans KR', sans-serif;
+  opacity: ${props => props.disabled ? 0.7 : 1};
   
   ${props => props.primary ? `
     background: #4174f6;
     color: white;
+    &:hover {
+      background: ${props.disabled ? '#4174f6' : '#3461d9'};
+    }
   ` : `
     background: #f8f9fa;
     color: #333;
+    &:hover {
+      background: ${props.disabled ? '#f8f9fa' : '#f0f0f0'};
+    }
   `}
 `;
+
+// API 설정
+const api = axios.create({
+  baseURL: '/api/v1',
+  headers: {
+    'Content-Type': 'application/json',
+  }
+});
+
+// 요청 인터셉터에 토큰 추가
+api.interceptors.request.use(request => {
+  const token = localStorage.getItem('jwtToken');
+  if (token) {
+    request.headers['Authorization'] = `Bearer ${token}`;
+  }
+  console.log('Request:', request);
+  return request;
+});
+
+// 응답 인터셉터 상세 로깅
+api.interceptors.response.use(
+  response => {
+    console.log('Response:', response);
+    return response;
+  },
+  error => {
+    console.error('API Error:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      config: error.config
+    });
+    return Promise.reject(error);
+  }
+);
 
 function SubscriptionConfirm() {
   const navigate = useNavigate();
   const location = useLocation();
   const { company, applicationData } = location.state || {};
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!company || !applicationData) {
     return <div>잘못된 접근입니다.</div>;
@@ -120,8 +164,90 @@ function SubscriptionConfirm() {
     navigate(-1);
   };
 
-  const handleConfirm = () => {
-    navigate('/subscription/apply/complete');
+  // 데이터 유효성 검사
+  const validateSubscriptionData = (data) => {
+    const errors = [];
+    
+    if (!data.IPOId) errors.push('종목 정보가 없습니다.');
+    if (!data.quantity || data.quantity <= 0) errors.push('청약 수량이 유효하지 않습니다.');
+    if (!data.accountNumber) errors.push('계좌번호가 없습니다.');
+    if (!data.depositAmount || data.depositAmount <= 0) errors.push('청약증거금이 유효하지 않습니다.');
+    
+    return errors;
+  };
+
+  const handleConfirm = async () => {
+    try {
+      setIsSubmitting(true);
+      
+      // DTO에 맞게 데이터 구조 단순화
+      const subscriptionData = {
+        ipoId: company.id,  // IPO ID
+        quantity: parseInt(applicationData.quantity) // 청약 수량
+      };
+  
+      // 데이터 유효성 검사 단순화
+      const validateSubscriptionData = (data) => {
+        const errors = [];
+        
+        if (!data.ipoId) errors.push('종목 정보가 없습니다.');
+        if (!data.quantity || data.quantity <= 0) errors.push('청약 수량이 유효하지 않습니다.');
+        
+        return errors;
+      };
+  
+      // 데이터 유효성 검사
+      const validationErrors = validateSubscriptionData(subscriptionData);
+      if (validationErrors.length > 0) {
+        throw new Error(validationErrors.join('\n'));
+      }
+  
+      console.log('Request payload:', subscriptionData);
+  
+      const token = localStorage.getItem('jwtToken');
+      const response = await api.post('/ipo/subscription', subscriptionData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+  
+      console.log('API Response structure:', {
+        status: response.status,
+        headers: response.headers,
+        data: response.data
+      });
+  
+      navigate('/subscription/apply/complete', {
+        state: {
+          company,
+          applicationData,
+          subscriptionResult: response.data
+        }
+      });
+    } catch (error) {
+      console.error('Subscription error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        data: error.response?.config?.data
+      });
+      
+      let errorMessage = '청약 신청 중 오류가 발생했습니다.';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 500) {
+        errorMessage = '서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+      } else if (error.response?.status === 401) {
+        errorMessage = '인증이 만료되었습니다. 다시 로그인해주세요.';
+        navigate('/login');
+        return;
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -175,8 +301,19 @@ function SubscriptionConfirm() {
           </Section>
 
           <ButtonContainer>
-            <Button onClick={handleClose}>이전</Button>
-            <Button primary onClick={handleConfirm}>확인</Button>
+            <Button 
+              onClick={handleClose}
+              disabled={isSubmitting}
+            >
+              이전
+            </Button>
+            <Button 
+              primary 
+              onClick={handleConfirm}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? '처리중...' : '확인'}
+            </Button>
           </ButtonContainer>
         </ModalContent>
       </ModalContainer>

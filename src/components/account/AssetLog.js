@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import styled, { createGlobalStyle } from 'styled-components';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import AssetSummary from './AssetSummary';
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 const GlobalStyle = createGlobalStyle`
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
@@ -14,20 +18,19 @@ const Container = styled.div`
   background: #ffffff;
 `;
 
-const Title = styled.div`
-  font-size: 26px;
-  font-weight: 600;
+const AccountAlias = styled.div`
+  font-size: 14px;
   color: #333;
-  margin-bottom: 0x;
+  margin-bottom: 4px;
+  letter-spacing: -0.5px;
 `;
 
-const AccountNumber = styled.div`
-  font-size: 14px;
-  color: #666;
+const AccountTitle = styled.div`
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
   margin-bottom: 24px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  letter-spacing: -0.5px;
 `;
 
 const MainContent = styled.div`
@@ -56,94 +59,189 @@ const TimePeriod = styled.div`
 const TimeButton = styled.button`
   padding: 8px 16px;
   border-radius: 20px;
-  background: ${props => props.active ? '#F8F9FA' : 'transparent'};
-  border: 1px solid ${props => props.active ? '#E5E8EB' : '#E5E8EB'};
-  color: ${props => props.active ? '#333' : '#666'};
+  background: ${props => (props.active ? '#F8F9FA' : 'transparent')};
+  border: 1px solid #E5E8EB;
+  color: ${props => (props.active ? '#333' : '#666')};
   font-size: 14px;
   cursor: pointer;
+
+  &:hover {
+    background: ${props => (props.active ? '#F8F9FA' : '#f8f9fa50')};
+  }
+`;
+
+const ErrorMessage = styled.div`
+  color: #dc3545;
+  padding: 16px;
+  background: #ffebee;
+  border-radius: 8px;
+  margin-bottom: 16px;
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  width: 100%;
+`;
+
+const LoadingText = styled.div`
+  font-size: 14px;
+  color: #666;
 `;
 
 function AssetLog() {
+  const navigate = useNavigate();
   const [accountData, setAccountData] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState('1주');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
 
-  // API로부터 데이터를 가져오는 함수
-  const fetchAccountData = async () => {
-    try {
-      const response = await fetch('/api/account-info', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          uuid: 'ao3r2kngd-39d-dsjen-398djfkjf'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('API 요청 실패');
-      }
-
-      const data = await response.json();
-      setAccountData(data);
-    } catch (error) {
-      console.error('데이터 조회 중 오류 발생:', error);
-    }
-  };
-
-  // 컴포넌트 마운트 시 데이터 조회
   useEffect(() => {
-    fetchAccountData();
-  }, []);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  // 금액을 원화 형식으로 포맷팅하는 함수
-  const formatKRW = (amount) => {
+        const token = localStorage.getItem('jwtToken');
+        console.log('Token exists:', !!token);
+        
+        if (!token) {
+          setError('로그인이 필요합니다.');
+          setLoading(false);
+          navigate('/login');
+          return;
+        }
+
+        const headers = {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        };
+
+        // 1. 사용자 정보 가져오기
+        console.log('Fetching user info...');
+        const userResponse = await axios.get(`${API_BASE_URL}/users/me`, { headers });
+        console.log('User info response:', userResponse.data);
+        
+        const userData = userResponse.data;
+        setUser(userData);
+        
+        const primaryAccountId = userData.primaryAccountId;
+        console.log('Primary Account ID from user:', primaryAccountId);
+
+        if (!primaryAccountId) {
+          console.log('계좌 없음, 계좌 생성 페이지로 이동');
+          navigate('/account');
+          return;
+        }
+
+        // 2. 계좌 자산 정보 가져오기
+        console.log('Fetching account assets for account:', primaryAccountId);
+        const assetsResponse = await axios.get(`${API_BASE_URL}/account/assets`, {
+          headers,
+          params: {
+            accountId: primaryAccountId
+          }
+        });
+
+        console.log('Assets response:', assetsResponse.data);
+        
+        if (assetsResponse.data) {
+          setAccountData({
+            ...assetsResponse.data,
+            accountId: primaryAccountId
+          });
+        } else {
+          setError('자산 정보를 찾을 수 없습니다.');
+        }
+
+      } catch (error) {
+        console.error('API 호출 중 에러 발생:', error);
+        if (error.response?.status === 401) {
+          setError('로그인이 만료되었습니다. 다시 로그인해주세요.');
+          localStorage.removeItem('jwtToken');
+          navigate('/login');
+        } else if (error.response?.status === 404) {
+          console.log('계좌 없음, 계좌 생성 페이지로 이동');
+          navigate('/account');
+        } else {
+          setError(
+            error.response?.data?.message ||
+            '정보를 불러오는데 실패했습니다. 잠시 후 다시 시도해주세요.'
+          );
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [navigate]);
+
+  const formatKRW = amount => {
+    if (!amount && amount !== 0) return '0원';
     return new Intl.NumberFormat('ko-KR', {
       style: 'currency',
       currency: 'KRW'
     }).format(amount).replace('₩', '') + '원';
   };
 
+  const formatAccountNumber = (accountId) => {
+    return `코코넛증권 ${accountId}`;
+  };
+
+  if (loading) {
+    return (
+      <Container>
+        <LoadingContainer>
+          <LoadingText>로딩중...</LoadingText>
+        </LoadingContainer>
+      </Container>
+    );
+  }
+
   return (
     <>
       <GlobalStyle />
       <Container>
-        <Title>자산</Title>
-        
-        <AccountNumber>
-          {accountData?.account_alias} {accountData?.account_id}
-        </AccountNumber>
+        {error && <ErrorMessage>{error}</ErrorMessage>}
 
-        <MainContent>
-          <Balance>
-            {accountData ? formatKRW(accountData.total_assets) : '0원'}
-          </Balance>
-          <BalanceChange>지난주보다 0원 (0%)</BalanceChange>
+        {accountData && (
+          <>
+            <AccountAlias>{accountData.accountAlias || '계좌'}</AccountAlias>
+            <AccountTitle>{formatAccountNumber(accountData.accountId)}</AccountTitle>
 
-          <TimePeriod>
-            {['1주', '1달', '3달', '1년'].map((period) => (
-              <TimeButton
-                key={period}
-                active={selectedPeriod === period}
-                onClick={() => setSelectedPeriod(period)}
-              >
-                {period}
-              </TimeButton>
-            ))}
-          </TimePeriod>
+            <MainContent>
+              <Balance>{formatKRW(accountData.total_assets)}</Balance>
+              <BalanceChange>지난주보다 0원 (0%)</BalanceChange>
 
-          {accountData && (
-            <div style={{ fontSize: '14px', color: '#666' }}>
-              <div>주문 가능 금액: {formatKRW(accountData.deposit)}</div>
-              <div>투자중인 금액: {formatKRW(accountData.invested_amount)}</div>
-            </div>
-          )}
+              <TimePeriod>
+                {['1주', '1달', '3달', '1년'].map(period => (
+                  <TimeButton
+                    key={period}
+                    active={selectedPeriod === period}
+                    onClick={() => setSelectedPeriod(period)}
+                  >
+                    {period}
+                  </TimeButton>
+                ))}
+              </TimePeriod>
 
-          <AssetSummary
-            krwBalance={accountData ? formatKRW(accountData.deposit) : '0원'}
-            usdBalance={'$0.00'}
-          />
-        </MainContent>
+              <div style={{ fontSize: '14px', color: '#666', marginBottom: '24px' }}>
+                <div>주문 가능 금액: {formatKRW(accountData.deposit)}</div>
+                <div>투자중인 금액: {formatKRW(accountData.invested_amount)}</div>
+              </div>
+
+              <AssetSummary
+                krwBalance={formatKRW(accountData.deposit)}
+                usdBalance="$0.00"
+                onStockClick={stockId => navigate(`/stock/${stockId}`)}
+              />
+            </MainContent>
+          </>
+        )}
       </Container>
     </>
   );

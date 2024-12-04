@@ -1,11 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled, { createGlobalStyle } from 'styled-components';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { ko } from 'date-fns/locale';
+import axios from 'axios';
 import "react-datepicker/dist/react-datepicker.css";
 
 // 한글 로케일 등록
 registerLocale('ko', ko);
+
+// API 관련 설정
+const api = axios.create({
+  baseURL: '/api/v1',
+  headers: {
+    'Content-Type': 'application/json',
+  }
+});
+
+api.interceptors.request.use(request => {
+  console.log('Starting Request:', request);
+  return request;
+});
+
+api.interceptors.response.use(
+  response => {
+    console.log('Response:', response);
+    return response;
+  },
+  error => {
+    console.log('Error:', error);
+    return Promise.reject(error);
+  }
+);
 
 const GlobalStyle = createGlobalStyle`
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
@@ -18,6 +44,7 @@ const Container = styled.div`
   padding: 40px 0;
   background: #ffffff;
 `;
+
 const Title = styled.div`
   font-size: 26px;
   font-weight: 600;
@@ -157,46 +184,153 @@ const EmptyState = styled.div`
   font-size: 16px;
 `;
 
+const LoadingState = styled(EmptyState)`
+  color: #4174f6;
+`;
+
+const ErrorState = styled(EmptyState)`
+  color: #cc0000;
+  background-color: #fff2f0;
+  border-radius: 8px;
+  margin: 20px 0;
+  padding: 16px;
+`;
+
+const SubscribeButton = styled.button`
+  margin-top: 16px;
+  padding: 12px 24px;
+  background-color: #4174f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #2855d1;
+  }
+
+  &:disabled {
+    background-color: #e5e8eb;
+    cursor: not-allowed;
+  }
+`;
+
 function SubscriptionHistory() {
+  const navigate = useNavigate();
   const [dateRange, setDateRange] = useState([null, null]);
   const [startDate, endDate] = dateRange;
-  
-  const subscriptions = [
-    {
-      id: 1,
-      companyName: '(주)에이펙스',
-      applicationDate: '2024.01.24',
-      status: '청약완료',
-      quantity: 50,
-      amount: 400000,
-      refundDate: '2024.01.28',
-      listingDate: '2024.02.01'
-    },
-    {
-      id: 2,
-      companyName: '(주)쓰리빌리언',
-      applicationDate: '2024.01.15',
-      status: '배정확정',
-      quantity: 30,
-      amount: 300000,
-      refundDate: '2024.01.19',
-      listingDate: '2024.01.25'
-    }
-  ];
+  const [activeIPOs, setActiveIPOs] = useState([]);
+  const [mySubscriptions, setMySubscriptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // 필터링된 청약 내역
-  const filteredSubscriptions = subscriptions.filter(subscription => {
-    if (!startDate || !endDate) return true;
+  useEffect(() => {
+    fetchData();
+  }, [dateRange]);
+
+  const fetchData = async () => {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      navigate('/login', { 
+        state: { 
+          redirectUrl: '/subscription/history',
+          message: '청약 내역 조회를 위해 로그인이 필요합니다.'
+        }
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // 1. 현재 진행중인 모든 공모주 정보 조회
+      const activeIPOsResponse = await api.get('/ipo/active', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      // 2. 내가 신청한 공모주 ID 목록 조회
+      const mySubscriptionsResponse = await api.get('/account/ipo', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      console.log('Active IPOs:', activeIPOsResponse.data);
+      console.log('My Subscriptions:', mySubscriptionsResponse.data);
+
+      // 내가 신청한 공모주 ID 목록 (id 필드 사용)
+      const mySubscriptionIds = mySubscriptionsResponse.data.map(sub => sub.id);
+      console.log('My Subscription IDs:', mySubscriptionIds);
+
+      // 구독 정보를 Map으로 변환하여 쉽게 찾을 수 있도록 함
+      const subscriptionMap = new Map(
+        mySubscriptionsResponse.data.map(sub => [sub.id, sub])
+      );
+
+      // 모든 공모주 정보에 신청 정보 추가
+      const formattedData = activeIPOsResponse.data.map(ipo => {
+        const ipoId = ipo.id || ipo.IPOId;
+        const mySubscription = subscriptionMap.get(ipoId);
+        
+        return {
+          IPOId: ipoId,
+          category: ipo.category,
+          companyName: ipo.companyName,
+          leadUnderwriter: ipo.leadUnderwriter,
+          subscriptionStartDate: ipo.subscriptionStartDate,
+          subscriptionEndDate: ipo.subscriptionEndDate,
+          refundDate: ipo.refundDate,
+          listingDate: ipo.listingDate,
+          maxSubscriptionLimit: ipo.maxSubscriptionLimit,
+          finalOfferPrice: ipo.finalOfferPrice,
+          status: determineStatus(ipo),
+          isSubscribed: mySubscriptionIds.includes(ipoId),
+          // 내가 신청한 정보 추가
+          quantity: mySubscription?.quantity,
+          totalPrice: mySubscription?.totalPrice,
+          myRefundDate: mySubscription?.refundDate,
+        };
+      });
+
+      console.log('Formatted IPO data with subscription status:', formattedData);
+      setActiveIPOs(formattedData);
+      setMySubscriptions(mySubscriptionIds);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError(err.response?.data?.message || '정보를 불러오는데 실패했습니다.');
+      
+      if (err.response?.status === 401) {
+        navigate('/login');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const determineStatus = (item) => {
+    const today = new Date();
+    const subscriptionEndDate = item.subscriptionEndDate ? new Date(item.subscriptionEndDate) : null;
+    const subscriptionStartDate = item.subscriptionStartDate ? new Date(item.subscriptionStartDate) : null;
     
-    const subscriptionDate = new Date(subscription.applicationDate.replace(/\./g, '-'));
-    return subscriptionDate >= startDate && subscriptionDate <= endDate;
-  });
+    if (subscriptionStartDate > today) {
+      return '청약예정';
+    } else if (subscriptionStartDate <= today && today <= subscriptionEndDate) {
+      return '청약중';
+    } else {
+      return '청약마감';
+    }
+  };
+
+  // 필터링된 공모주 목록 (내가 신청한 것만)
+  const myIPOs = activeIPOs.filter(ipo => ipo.isSubscribed);
 
   return (
     <>
       <GlobalStyle />
       <Container>
-        <Title>청약 내역</Title>
+        <Title>나의 청약신청 내역</Title>
 
         <DatePickerWrapper>
           <DatePicker
@@ -205,6 +339,7 @@ function SubscriptionHistory() {
             endDate={endDate}
             onChange={(update) => {
               setDateRange(update);
+              console.log('Date range updated:', update);
             }}
             dateFormat="yyyy.MM.dd"
             locale="ko"
@@ -215,36 +350,65 @@ function SubscriptionHistory() {
         </DatePickerWrapper>
 
         <SubscriptionList>
-          {filteredSubscriptions.length > 0 ? (
-            filteredSubscriptions.map(subscription => (
-              <SubscriptionCard key={subscription.id}>
+          {loading ? (
+            <LoadingState>정보를 불러오는 중입니다...</LoadingState>
+          ) : error ? (
+            <ErrorState>{error}</ErrorState>
+          ) : myIPOs.length > 0 ? (
+            myIPOs.map(ipo => (
+              <SubscriptionCard key={ipo.IPOId}>
                 <CardHeader>
-                  <CompanyName>{subscription.companyName}</CompanyName>
-                  <Status status={subscription.status}>{subscription.status}</Status>
+                  <CompanyName>{ipo.companyName}</CompanyName>
+                  <Status status={ipo.status}>{ipo.status}</Status>
                 </CardHeader>
                 <CardContent>
                   <InfoRow>
-                    <span>청약일자</span>
-                    <span>{subscription.applicationDate}</span>
+                    <span>기업분류</span>
+                    <span>{ipo.category || '-'}</span>
                   </InfoRow>
                   <InfoRow>
                     <span>청약수량</span>
-                    <span>{subscription.quantity}주 / {subscription.amount.toLocaleString()}원</span>
+                    <span>{ipo.quantity?.toLocaleString() || 0}주</span>
                   </InfoRow>
                   <InfoRow>
-                    <span>환불일자</span>
-                    <span>{subscription.refundDate}</span>
+                    <span>청약금액</span>
+                    <span>{ipo.totalPrice?.toLocaleString() || 0}원</span>
                   </InfoRow>
                   <InfoRow>
-                    <span>상장일자</span>
-                    <span>{subscription.listingDate}</span>
+                    <span>청약기간</span>
+                    <span>
+                      {ipo.subscriptionStartDate ? new Date(ipo.subscriptionStartDate).toLocaleDateString() : '-'} ~ 
+                      {ipo.subscriptionEndDate ? new Date(ipo.subscriptionEndDate).toLocaleDateString() : '-'}
+                    </span>
+                  </InfoRow>
+                  <InfoRow>
+                    <span>청약한도</span>
+                    <span>{ipo.maxSubscriptionLimit?.toLocaleString() || 0}주</span>
+                  </InfoRow>
+                  <InfoRow>
+                    <span>확정발행가</span>
+                    <span>{ipo.finalOfferPrice ? Number(ipo.finalOfferPrice).toLocaleString() : 0}원</span>
+                  </InfoRow>
+                  <InfoRow>
+                    <span>상장예정일</span>
+                    <span>{ipo.listingDate ? new Date(ipo.listingDate).toLocaleDateString() : '-'}</span>
+                  </InfoRow>
+                  {ipo.myRefundDate && (
+                    <InfoRow>
+                      <span>환불예정일</span>
+                      <span>{new Date(ipo.myRefundDate).toLocaleDateString()}</span>
+                    </InfoRow>
+                  )}
+                  <InfoRow>
+                    <span>대표주관회사</span>
+                    <span>{ipo.leadUnderwriter || '-'}</span>
                   </InfoRow>
                 </CardContent>
               </SubscriptionCard>
             ))
           ) : (
             <EmptyState>
-              선택하신 기간에 청약 내역이 없습니다.
+              조회된 청약신청 내역이 없습니다
             </EmptyState>
           )}
         </SubscriptionList>

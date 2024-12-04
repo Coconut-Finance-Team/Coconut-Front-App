@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import styled from 'styled-components';
 import logo from '../../assets/logo.png';
 import googleLoginBtn from '../../assets/google.png';
@@ -125,7 +124,7 @@ const GoogleLoginImage = styled.img`
 
 function Login({ setUser }) {
   const [formData, setFormData] = useState({
-    username: '',
+    id: '',
     password: '',
   });
   const navigate = useNavigate();
@@ -138,52 +137,58 @@ function Login({ setUser }) {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('https://204affe3-b063-4855-a90d-f1a534314a8c.mock.pstmn.io/Login', formData);
-      if (response.status === 200) {
-        console.log("로그인 성공:", response.data);
-        localStorage.setItem('accessToken', response.data.accessToken);
-        localStorage.setItem('refreshToken', response.data.refreshToken);
+      const response = await fetch('http://localhost:8080/api/v1/authenticate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: formData.id,
+          password: formData.password,
+        }),
+      });
 
-        setUser({
-          username: formData.username,
-          accessToken: response.data.accessToken,
-          refreshToken: response.data.refreshToken,
-          isAdmin: response.data.isAdmin,
+      if (response.ok) {
+        const data = await response.json();
+        const token = data.token;
+        localStorage.setItem('jwtToken', token);
+        
+        // 현재 로그인한 사용자 정보 가져오기
+        const userResponse = await fetch('http://localhost:8080/api/v1/users/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
-
-        navigate('/');
+        
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          console.log('사용자 정보:', userData);
+          
+          setUser({
+            username: userData.username
+          });
+          
+          // 사용자 이름을 포함한 환영 메시지 표시
+          alert(`${userData.username}님, 오셨군요! 환영합니다! 🌴`);
+          navigate('/');
+        } else {
+          console.error('사용자 정보 가져오기 실패');
+        }
       } else {
-        console.error("로그인 실패:", response.data.message);
+        const errorData = await response.json();
+        console.error('로그인 실패:', errorData);
+        alert(`로그인 실패: ${errorData.message || '아이디 또는 비밀번호를 확인해주세요.'}`);
       }
     } catch (error) {
-      console.error("로그인 중 오류 발생:", error);
+      console.error('로그인 요청 중 오류 발생:', error);
+      alert('로그인 요청 중 오류가 발생했습니다.');
     }
   };
 
   const handleGoogleLogin = async () => {
     try {
-      const clientId = "YOUR_GOOGLE_CLIENT_ID";
-      const googleAuthUrl = "https://accounts.google.com/o/oauth2/v2/auth";
-      const redirectUri = "http://localhost:3000/auth/google/callback";
-      
-      const scope = [
-        "https://www.googleapis.com/auth/userinfo.email",
-        "https://www.googleapis.com/auth/userinfo.profile"
-      ].join(" ");
-
-      const params = {
-        response_type: 'code',
-        client_id: clientId,
-        redirect_uri: redirectUri,
-        prompt: 'select_account',
-        access_type: 'offline',
-        scope
-      };
-
-      const searchParams = new URLSearchParams(params);
-      const url = `${googleAuthUrl}?${searchParams.toString()}`;
-
-      window.location.href = url;
+      const springBootAuthUrl = "http://localhost:8080/oauth2/authorization/google";
+      window.location.href = springBootAuthUrl;
     } catch (error) {
       console.error("Google 로그인 중 오류 발생:", error);
     }
@@ -207,11 +212,11 @@ function Login({ setUser }) {
             <InputContainer>
               <Input
                 type="text"
-                name="username"
-                value={formData.username}
+                name="id"
+                value={formData.id}
                 onChange={handleChange}
                 placeholder="아이디"
-                autoComplete="username"
+                autoComplete="id"
                 required
               />
               <Input
