@@ -30,7 +30,7 @@ const styles = `
 `;
 
 const SystemMonitoring = () => {
-  const grafanaUrl = 'http://a071b631c194145ab8c652da2b317b71-1926666631.ap-northeast-2.elb.amazonaws.com/d/4b545447f/1-kubernetes-all-in-one-cluster-monitoring-kr?var-duration=5m&orgId=1&from=2024-12-03T23:03:55.971Z&to=2024-12-04T02:03:55.971Z&var-node=&var-instance=10.0.3.135:9100&var-namespace=&var-pod=&refresh=5s&theme=light';
+  const grafanaUrl = process.env.REACT_APP_GRAFANA_URL;
 
   return (
     <>
