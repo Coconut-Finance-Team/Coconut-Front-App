@@ -1,18 +1,33 @@
-apiVersion: argoproj.io/v1alpha1
-kind: Application
+# deployment.yaml
+
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: frontend-app
-  namespace: argocd
+  name: frontend-deployment
+  namespace: coconut-frontend
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
-  project: default
-  source:
-    repoURL: https://github.com/Coconut-Finance-Team/Coconut-Front-App.git
-    path: k8s
-    targetRevision: main
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: coconut-frontend
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      tolerations:  # 여기 추가
+      - key: "dedicated"
+        operator: "Equal"
+        value: "frontend"
+        effect: "NoSchedule"
+      imagePullSecrets:
+      - name: ecr-credentials
+      containers:
+      - name: frontend
+        image: 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/castlehoo/frontend:25
+        imagePullPolicy: Always
+        env:
+        - name: REACT_APP_API_BASE_URL
+          value: "https://api.wooricoconut.com/api/v1"
