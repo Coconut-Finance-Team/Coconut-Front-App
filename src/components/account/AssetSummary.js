@@ -9,6 +9,8 @@ import samsungImage from '../../assets/samsung.png';
 import naverImage from '../../assets/naver.png';
 import lgImage from '../../assets/lg.png';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+
 // styled-components 정의
 const SummaryContainer = styled.div`
   background: #ffffff;
@@ -174,7 +176,7 @@ const InvestmentSummary = () => {
           return;
         }
 
-        const response = await fetch('http://localhost:8080/api/v1/account/investment', {
+        const response = await fetch(`${API_BASE_URL}/account/investment`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

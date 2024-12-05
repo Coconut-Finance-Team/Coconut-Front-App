@@ -3,6 +3,9 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianG
 import styled from 'styled-components';
 import { useParams, useLocation } from 'react-router-dom';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+const WS_BASE_URL = process.env.REACT_APP_WS_BASE_URL || 'ws://localhost:8080';
+
 const Container = styled.div`
   padding: 40px;
   max-width: 1200px;
@@ -163,7 +166,7 @@ function MarketChart() {
     const stockCode = isKospi ? '0001' : '1001';
     const fetchHistoricalData = async () => {
       try {
-        const response = await fetch(`http://localhost:8080/api/v1/stock/${stockCode}/charts/1min`);
+        const response = await fetch(`${API_BASE_URL}/stock/${stockCode}/charts/1min`);
         const data = await response.json();
         
         if (!Array.isArray(data) || data.length === 0) {
@@ -230,7 +233,7 @@ function MarketChart() {
 
     const stockCode = isKospi ? '0001' : '1001';
     const connectWebSocket = () => {
-      wsRef.current = new WebSocket(`ws://localhost:8080/ws/stock/${stockCode}`);
+      wsRef.current = new WebSocket(`${WS_BASE_URL}/ws/stock/${stockCode}`);
       
       wsRef.current.onopen = () => {
         console.log('WebSocket Connected');

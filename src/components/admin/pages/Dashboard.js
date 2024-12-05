@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -10,7 +12,7 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/v1/admin/dashboard');
+        const response = await fetch(`${API_BASE_URL}/admin/dashboard`);
         if (!response.ok) {
           throw new Error('데이터를 불러오는데 실패했습니다');
         }

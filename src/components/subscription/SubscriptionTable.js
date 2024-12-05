@@ -126,6 +126,8 @@ const PageButton = styled.button`
   }
 `;
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -167,7 +169,7 @@ function SubscriptionTable() {
   const fetchSubscriptions = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/ipo/active');
+      const response = await api.get(`${API_BASE_URL}/ipo/active`);
       console.log('Fetched subscriptions:', response.data);
 
       // API 응답 데이터 변환

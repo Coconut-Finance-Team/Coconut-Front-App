@@ -71,6 +71,9 @@ const ChartSection = styled.div`
   overflow: hidden;
 `;
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+const WS_BASE_URL = process.env.REACT_APP_WS_BASE_URL || 'ws://localhost:8080';
+
 const IndexChart = ({ name, isKospi = true }) => {
   const navigate = useNavigate();
   const [chartData, setChartData] = useState([]);
@@ -107,7 +110,7 @@ const IndexChart = ({ name, isKospi = true }) => {
     const fetchHistoricalData = async () => {
       try {
         const stockCode = isKospi ? '0001' : '1001';
-        const response = await fetch(`http://localhost:8080/api/v1/stock/${stockCode}/charts/1min`);
+        const response = await fetch(`${API_BASE_URL}/stock/${stockCode}/charts/1min`);
         const data = await response.json();
 
         if (!Array.isArray(data) || data.length === 0) {
@@ -182,7 +185,7 @@ const IndexChart = ({ name, isKospi = true }) => {
 
     const stockCode = isKospi ? '0001' : '1001';
     const connectWebSocket = () => {
-      wsRef.current = new WebSocket(`ws://localhost:8080/ws/stock/${stockCode}`);
+      wsRef.current = new WebSocket(`${WS_BASE_URL}/ws/stock/${stockCode}`);
       
       wsRef.current.onopen = () => {
         console.log('WebSocket Connected');

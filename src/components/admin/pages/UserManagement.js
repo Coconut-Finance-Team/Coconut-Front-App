@@ -149,6 +149,8 @@ const styles = `
   }
 `;
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -172,7 +174,7 @@ const UserManagement = () => {
           console.log('토큰 페이로드:', tokenPayload);
 
           // 사용자 정보 가져오기
-          const userResponse = await fetch('http://localhost:8080/api/v1/users/me', {
+          const userResponse = await fetch(`${API_BASE_URL}/users/me`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
@@ -192,7 +194,7 @@ const UserManagement = () => {
           setCurrentUser(userData);
 
           // 전체 사용자 목록 가져오기 시도
-          const usersResponse = await fetch('http://localhost:8080/api/v1/admin/read/user/all', {
+          const usersResponse = await fetch(`${API_BASE_URL}/admin/read/user/all`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',

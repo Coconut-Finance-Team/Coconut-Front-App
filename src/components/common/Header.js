@@ -213,6 +213,8 @@ const DropdownButton = styled.button`
   }
 `;
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+
 const Header = ({ user, setUser }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -226,7 +228,7 @@ const Header = ({ user, setUser }) => {
   
       if (token) {
         try {
-          const response = await fetch('http://localhost:8080/api/v1/users/me', {
+          const response = await fetch(`${API_BASE_URL}/users/me`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',

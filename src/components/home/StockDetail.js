@@ -8,6 +8,7 @@ import samsungImage from '../../assets/samsung.png';
 import lgImage from '../../assets/lg.png';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+const WS_BASE_URL = process.env.REACT_APP_WS_BASE_URL || 'ws://localhost:8080';
 
 const STOCK_INFO = {
   '005930': {
@@ -237,7 +238,7 @@ function StockDetail() {
     if (!candleSeriesRef.current) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/stock/${stockId}/charts/${timeframe}`);
+      const response = await fetch(`${API_BASE_URL}/stock/${stockId}/charts/${timeframe}`);
       const data = await response.json();
 
       if (!data || !Array.isArray(data) || data.length === 0) {
@@ -573,7 +574,7 @@ function StockDetail() {
         wsRef.current.close();
       }
 
-      wsRef.current = new WebSocket(`ws://localhost:8080/ws/stock/${stockId}`);
+      wsRef.current = new WebSocket(`${WS_BASE_URL}/ws/stock/${stockId}`);
       
       wsRef.current.onopen = () => {
         console.log('WebSocket Connected');
@@ -630,7 +631,7 @@ function StockDetail() {
 
   const fetchUserData = async (token) => {
     try {
-      const response = await axios.get('${API_BASE_URL}/v1/users/me', {
+      const response = await axios.get(`${API_BASE_URL}/v1/users/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

@@ -193,6 +193,8 @@ const styles = `
   }
 `;
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+
 const UserDetail = ({ user, onBack }) => {
   const [userDetail, setUserDetail] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -205,7 +207,7 @@ const UserDetail = ({ user, onBack }) => {
     
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:8080/api/v1/admin/read/user/${user.uuid}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/read/user/${user.uuid}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -258,7 +260,7 @@ const UserDetail = ({ user, onBack }) => {
     setSuspendLoading(true);
   
     try {
-      const response = await fetch(`/api/v1/admin/suspend/user/${user.uuid}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/suspend/user/${user.uuid}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

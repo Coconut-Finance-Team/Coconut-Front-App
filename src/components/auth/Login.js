@@ -122,6 +122,8 @@ const GoogleLoginImage = styled.img`
   }
 `;
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+
 function Login({ setUser }) {
   const [formData, setFormData] = useState({
     id: '',
@@ -137,7 +139,7 @@ function Login({ setUser }) {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:8080/api/v1/authenticate', {
+      const response = await fetch(`${API_BASE_URL}/authenticate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -154,7 +156,7 @@ function Login({ setUser }) {
         localStorage.setItem('jwtToken', token);
         
         // 현재 로그인한 사용자 정보 가져오기
-        const userResponse = await fetch('http://localhost:8080/api/v1/users/me', {
+        const userResponse = await fetch(`${API_BASE_URL}/users/me`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

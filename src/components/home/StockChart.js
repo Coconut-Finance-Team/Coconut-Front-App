@@ -24,6 +24,8 @@ Chart.register(
   Tooltip
 );
 
+const WS_BASE_URL = process.env.REACT_APP_WS_BASE_URL || 'ws://localhost:8080';
+
 // 시간 프레임 옵션
 const TIMEFRAMES = [
   { key: '1min', label: '1분', minutes: 1 },
@@ -80,7 +82,7 @@ const StockChart = ({ stockId }) => {
     if (!stockId) return;
 
     console.log(`Connecting WebSocket for stock ${stockId}...`);
-    const ws = new WebSocket(`ws://localhost:8080/ws/stock/${stockId}`);
+    const ws = new WebSocket(`${WS_BASE_URL}/ws/stock/${stockId}`);
 
     ws.onopen = () => {
       console.log('WebSocket Connected Successfully');
