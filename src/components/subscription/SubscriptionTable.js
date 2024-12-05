@@ -44,7 +44,7 @@ const SearchInput = styled.input`
   border: 1px solid #E5E8EB;
   font-size: 14px;
   width: 100%;
-  max-width: 400px; // 최대 크기를 제한
+  max-width: 400px;
   outline: none;
   
   &::placeholder {
@@ -126,8 +126,24 @@ const PageButton = styled.button`
   }
 `;
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+const LoadingMessage = styled.div`
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 16px;
+`;
 
+const ErrorMessage = styled.div`
+  text-align: center;
+  padding: 20px;
+  color: #ff3b30;
+  background-color: #fff2f0;
+  border-radius: 8px;
+  margin: 20px 0;
+  font-size: 14px;
+`;
+
+// API 인스턴스 생성
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -152,7 +168,6 @@ api.interceptors.response.use(
   }
 );
 
-
 function SubscriptionTable() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -160,28 +175,22 @@ function SubscriptionTable() {
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchType, setSearchType] = useState('companyName'); // 기업명 기본값
-
-  useEffect(() => {
-    fetchSubscriptions();
-  }, [currentPage]); // 페이지 변경 시 데이터 다시 로드
+  const [searchType, setSearchType] = useState('companyName');
 
   const fetchSubscriptions = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`${API_BASE_URL}/ipo/active`);
-      console.log('Fetched subscriptions:', response.data);
-
-      // API 응답 데이터 변환
+      const response = await api.get('/ipo/active');
+      
       const formattedData = response.data.map(item => ({
         id: item.id,
         category: item.category || '코스닥시장',
         companyName: item.companyName,
-        underwriter: item.leadUnderwriter,  // 수정된 부분
+        underwriter: item.leadUnderwriter,
         applicationPeriod: `${new Date(item.subscriptionStartDate).toLocaleDateString()} - ${new Date(item.subscriptionEndDate).toLocaleDateString()}`,
         refundDate: new Date(item.refundDate).toLocaleDateString(),
-        maxLimit: item.maxSubscriptionLimit ? `${item.maxSubscriptionLimit.toLocaleString()}주` : '-',  // 수정된 부분
-        subscriptionPrice: item.finalOfferPrice ? `${item.finalOfferPrice.toLocaleString()}원` : '-'  // 수정된 부분
+        maxLimit: item.maxSubscriptionLimit ? `${item.maxSubscriptionLimit.toLocaleString()}주` : '-',
+        subscriptionPrice: item.finalOfferPrice ? `${item.finalOfferPrice.toLocaleString()}원` : '-'
       }));
 
       setSubscriptions(formattedData);
@@ -190,7 +199,6 @@ function SubscriptionTable() {
       console.error('Error fetching subscriptions:', err);
       setError('청약 정보를 불러오는데 실패했습니다.');
       
-      // 에러 시 테스트용 데이터 사용
       if (process.env.NODE_ENV === 'development') {
         setSubscriptions([
           {
@@ -209,6 +217,10 @@ function SubscriptionTable() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchSubscriptions();
+  }, [currentPage]);
 
   const handleApply = (subscription) => {
     const token = localStorage.getItem('jwtToken');
@@ -235,16 +247,12 @@ function SubscriptionTable() {
     }
   };
 
-  // 검색 필터링
   const filteredSubscriptions = subscriptions.filter(item => {
     if (!searchTerm) return true;
-    
     const searchValue = searchTerm.toLowerCase();
-    if (searchType === 'companyName') {
-      return item.companyName.toLowerCase().includes(searchValue);
-    } else {
-      return item.underwriter.toLowerCase().includes(searchValue);
-    }
+    return searchType === 'companyName' 
+      ? item.companyName.toLowerCase().includes(searchValue)
+      : item.underwriter.toLowerCase().includes(searchValue);
   });
 
   return (
@@ -325,23 +333,5 @@ function SubscriptionTable() {
     </Container>
   );
 }
-
-// 추가된 스타일 컴포넌트
-const LoadingMessage = styled.div`
-  text-align: center;
-  padding: 40px;
-  color: #666;
-  font-size: 16px;
-`;
-
-const ErrorMessage = styled.div`
-  text-align: center;
-  padding: 20px;
-  color: #ff3b30;
-  background-color: #fff2f0;
-  border-radius: 8px;
-  margin: 20px 0;
-  font-size: 14px;
-`;
 
 export default SubscriptionTable;
