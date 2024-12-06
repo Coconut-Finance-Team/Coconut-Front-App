@@ -30,4 +30,4 @@ spec:
         imagePullPolicy: Always
         env:
         - name: REACT_APP_API_BASE_URL
-          value: "https://api.wooricoconut.com/api/v1"
+          value: "https://a14101bbd3ec64f109e5293e898fea7c-508872588.ap-northeast-2.elb.amazonaws.com:8080/api/v1"
