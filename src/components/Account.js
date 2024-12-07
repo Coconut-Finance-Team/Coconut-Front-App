@@ -12,6 +12,8 @@ import AccountManage from './account/AccountManage';
 import SubscriptionHistory from './account/SubscriptionHistory';
 import accountImage from '../assets/account.png';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+
 const NoAccountContainer = styled.div`
   display: flex;
   flex-direction: column;
