@@ -155,7 +155,7 @@ const Account = ({ user, setUser }) => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await fetch('http://localhost:8080/api/v1/users/me', {
+      const response = await fetch(`${API_BASE_URL}/users/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

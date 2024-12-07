@@ -207,7 +207,7 @@ function SubscriptionConfirm() {
       console.log('Request payload:', subscriptionData);
   
       const token = localStorage.getItem('jwtToken');
-      const response = await api.post('/ipo/subscription', subscriptionData, {
+      const response = await api.post(`${API_BASE_URL}/ipo/subscription`, subscriptionData, {
         headers: {
           'Authorization': `Bearer ${token}`,
         }

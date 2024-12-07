@@ -211,7 +211,7 @@ const TransactionLog = () => {
           return;
         }
 
-        let endpoint = `${API_BASE_URL}/account/transactions/all`;
+        let endpoint = (`${API_BASE_URL}/account/transactions/all`);
         const response = await axios.get(endpoint, {
           headers,
           params: {

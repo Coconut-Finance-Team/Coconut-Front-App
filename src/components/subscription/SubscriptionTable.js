@@ -180,7 +180,7 @@ function SubscriptionTable() {
   const fetchSubscriptions = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/ipo/active');
+      const response = await api.get(`${API_BASE_URL}/ipo/active`);
       
       const formattedData = response.data.map(item => ({
         id: item.id,

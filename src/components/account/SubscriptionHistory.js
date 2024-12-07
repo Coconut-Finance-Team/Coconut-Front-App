@@ -249,12 +249,12 @@ function SubscriptionHistory() {
       setLoading(true);
       
       // 1. 현재 진행중인 모든 공모주 정보 조회
-      const activeIPOsResponse = await api.get('/ipo/active', {
+      const activeIPOsResponse = await api.get(`${API_BASE_URL}/ipo/active`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
       // 2. 내가 신청한 공모주 ID 목록 조회
-      const mySubscriptionsResponse = await api.get('/account/ipo', {
+      const mySubscriptionsResponse = await api.get(`${API_BASE_URL}/account/ipo`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
