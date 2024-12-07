@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+
 const PageContainer = styled.div`
   padding: 40px;
   max-width: 1200px;
@@ -106,7 +108,7 @@ function MyPage() {
       if (token) {
         setIsLoading(true);
         try {
-          const response = await fetch('http://localhost:8080/api/v1/users/me', {
+          const response = await fetch(`${API_BASE_URL}/users/me`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
