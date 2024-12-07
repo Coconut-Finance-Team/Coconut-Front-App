@@ -26,8 +26,8 @@ spec:
       - name: ecr-credentials
       containers:
       - name: frontend
-        image: 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/castlehoo/frontend:97
+        image: 992382629018.dkr.ecr.ap-northeast-2.amazonaws.com/castlehoo/frontend:99
         imagePullPolicy: Always
         env:
         - name: REACT_APP_API_BASE_URL
-          value: "https://a14101bbd3ec64f109e5293e898fea7c-508872588.ap-northeast-2.elb.amazonaws.com:8080/api/v1"
+          value: "https://a33ed341a16cb4068b7a4d4074f66d3e-930484984.ap-northeast-2.elb.amazonaws.com:8080/api/v1"
