@@ -122,7 +122,9 @@ const GoogleLoginImage = styled.img`
   }
 `;
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api/v1';
+  const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://www.wooricoconut.com/api/v1'
+  : 'http://localhost:8080/api/v1';
 
 function Login({ setUser }) {
   const [formData, setFormData] = useState({
@@ -155,7 +157,7 @@ function Login({ setUser }) {
         const token = data.token;
         localStorage.setItem('jwtToken', token);
         
-        // 현재 로그인한 사용자 정보 가져오기
+        // 현재 로그인한 사용자 정보 가져오기 
         const userResponse = await fetch(`${API_BASE_URL}/users/me`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -164,22 +166,15 @@ function Login({ setUser }) {
         
         if (userResponse.ok) {
           const userData = await userResponse.json();
-          console.log('사용자 정보:', userData);
-          
           setUser({
             username: userData.username
           });
-          
-          // 사용자 이름을 포함한 환영 메시지 표시
           alert(`${userData.username}님, 오셨군요! 환영합니다! 🌴`);
           navigate('/');
-        } else {
-          console.error('사용자 정보 가져오기 실패');
         }
       } else {
         const errorData = await response.json();
-        console.error('로그인 실패:', errorData);
-        alert(`로그인 실패: ${errorData.message || '아이디 또는 비밀번호를 확인해주세요.'}`);
+        alert(errorData.message || '아이디 또는 비밀번호를 확인해주세요.');
       }
     } catch (error) {
       console.error('로그인 요청 중 오류 발생:', error);
@@ -189,7 +184,9 @@ function Login({ setUser }) {
 
   const handleGoogleLogin = async () => {
     try {
-      const springBootAuthUrl = "http://localhost:8080/oauth2/authorization/google";
+      const springBootAuthUrl = process.env.NODE_ENV === 'production'
+        ? "https://www.wooricoconut.com/oauth2/authorization/google"
+        : "http://localhost:8080/oauth2/authorization/google";
       window.location.href = springBootAuthUrl;
     } catch (error) {
       console.error("Google 로그인 중 오류 발생:", error);

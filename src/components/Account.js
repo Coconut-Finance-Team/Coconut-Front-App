@@ -166,7 +166,7 @@ const Account = ({ user, setUser }) => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('받아온 사용자 정보:', data);
+        console.log('받아온 사용자 정보: ', data);
         setUser(data);
         
         if (data.primaryAccountId && location.pathname === '/account') {
